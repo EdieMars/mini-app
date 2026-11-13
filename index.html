@@ -484,7 +484,9 @@
       return '<div class="item"><span>' + it[0] + '</span><span class="qty">' +
              A.fmtQty(it[2] * n / per, it[1]) + '</span></div>';
     }).join('');
-    $('cardOut').innerHTML = '<div class="card"><div class="head">На ' + n + ' порций</div>' + lines + '</div>';
+    var w = (n % 10 === 1 && n % 100 !== 11) ? 'порцию'
+          : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 'порции' : 'порций');
+    $('cardOut').innerHTML = '<div class="card"><div class="head">На ' + n + ' ' + w + '</div>' + lines + '</div>';
   }
 
   $('cardSearch').addEventListener('click', function () {

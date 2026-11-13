@@ -268,10 +268,17 @@
     return String(Math.round(q * 1000) / 1000) + ' ' + (unit || '');
   }
 
+  function portionsWord(n) {
+    n = Math.abs(Math.round(n));
+    if (n % 10 === 1 && n % 100 !== 11) return 'порция';
+    if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) return 'порции';
+    return 'порций';
+  }
+
   function cardText(card, portions) {
     var per = card.per || 1;
     var lines = [card.dish + (card.output ? ' (' + card.output + ')' : ''),
-                 'На ' + portions + ' порций:', ''];
+                 'На ' + portions + ' ' + portionsWord(portions) + ':', ''];
     card.ing.forEach(function (it) {
       lines.push('  ' + it[0] + ' — ' + fmtQty(it[2] * portions / per, it[1]));
     });
