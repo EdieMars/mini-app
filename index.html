@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Заказ продуктов</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #17212b);
+    --card: var(--tg-theme-secondary-bg-color, #232e3c);
+    --text: var(--tg-theme-text-color, #f5f5f5);
+    --hint: var(--tg-theme-hint-color, #8b9bab);
+    --accent: var(--tg-theme-button-color, #5288c1);
+    --accent-text: var(--tg-theme-button-text-color, #ffffff);
+    --line: rgba(255, 255, 255, .08);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; padding: 12px 12px 32px;
+    background: var(--bg); color: var(--text);
+    font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  h1 { font-size: 19px; margin: 4px 0 14px; font-weight: 600; }
+  .card { background: var(--card); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+  label { display: block; font-size: 13px; color: var(--hint); margin-bottom: 6px; }
+  input {
+    width: 100%; padding: 11px 12px; font-size: 16px; color: var(--text);
+    background: rgba(255, 255, 255, .06); border: 1px solid var(--line);
+    border-radius: 10px; outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+  .row { display: flex; gap: 8px; }
+  .row > div { flex: 1; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tab {
+    flex: 1; padding: 9px 6px; font-size: 14px; font-weight: 500;
+    color: var(--hint); background: rgba(255, 255, 255, .05);
+    border: none; border-radius: 10px; width: auto; margin: 0;
+  }
+  .tab.active { color: var(--accent-text); background: var(--accent); }
+  button {
+    width: 100%; padding: 14px; margin-top: 4px; font-size: 16px; font-weight: 600;
+    color: var(--accent-text); background: var(--accent);
+    border: none; border-radius: 12px;
+  }
+  button:active { opacity: .85; }
+  button.ghost { background: rgba(255, 255, 255, .08); color: var(--text); margin-top: 10px; }
+  .err { color: #ff8a80; font-size: 14px; margin-top: 8px; min-height: 18px; }
+  .head { font-size: 15px; margin: 14px 0 8px; color: var(--hint); }
+  .head b { color: var(--text); font-weight: 600; }
+  .cat { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--hint); margin: 14px 0 4px; }
+  .item { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); }
+  .item:last-child { border-bottom: none; }
+  .qty { color: var(--accent); font-weight: 600; white-space: nowrap; }
+  .total { margin-top: 14px; font-size: 14px; color: var(--hint); }
+  .hidden { display: none; }
+  .tip { font-size: 12px; color: var(--hint); margin-top: 6px; }
+  .tip b { color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body>
+  <h1>Заказ продуктов</h1>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" data-mode="dates" id="tab-dates">Даты</button>
+      <button class="tab" data-mode="days" id="tab-days">Дни цикла</button>
+    </div>
+
+    <div id="mode-dates">
+      <label>С какого и по какое число</label>
+      <div class="row">
+        <div><input id="from" inputmode="numeric" placeholder="16.11" autocomplete="off"></div>
+        <div><input id="to" inputmode="numeric" placeholder="18.11" autocomplete="off"></div>
+      </div>
+      <div class="tip" id="datenote">День 1 цикла — 16.11.2026</div>
+    </div>
+
+    <div id="mode-days" class="hidden">
+      <label>Дни (например 15-17, 1,3,5 или 28-3)</label>
+      <input id="days" inputmode="numeric" placeholder="1-3" autocomplete="off">
+      <div class="tip">Меньше «с» = через конец цикла: 28-3</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>Сколько человек</label>
+    <div class="row">
+      <div><input id="b" inputmode="numeric" placeholder="Завтрак"></div>
+      <div><input id="l" inputmode="numeric" placeholder="Обед"></div>
+      <div><input id="d" inputmode="numeric" placeholder="Ужин"></div>
+    </div>
+    <div style="margin-top:8px">
+      <label>Запас сверх людей (можно 0)</label>
+      <input id="reserve" inputmode="numeric" placeholder="0">
+    </div>
+  </div>
+
+  <button id="go">Посчитать</button>
+  <div class="err" id="err"></div>
+
+  <div id="out" class="hidden">
+    <div class="head" id="head"></div>
+    <div id="list"></div>
+    <div class="total" id="total"></div>
+    <button class="ghost" id="copy">Скопировать список</button>
+  </div>
+
+<script src="data.js"></script>
+<script src="calc.js"></script>
+<script>
+(function () {
+  var A = window.APP, D = window.DATA;
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) { tg.ready(); tg.expand(); }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var lastText = '';
+  var mode = 'dates';
+
+  function val(id) { return ($(id).value || '').trim(); }
+  function num(id) { var v = val(id); return v === '' ? 0 : parseInt(v, 10) || 0; }
+
+  function setMode(m) {
+    mode = m;
+    $('tab-days').classList.toggle('active', m === 'days');
+    $('tab-dates').classList.toggle('active', m === 'dates');
+    $('mode-days').classList.toggle('hidden', m !== 'days');
+    $('mode-dates').classList.toggle('hidden', m !== 'dates');
+  }
+
+  // подсказка: какие дни цикла получаются из дат
+  function updateDateNote() {
+    try {
+      var f = A.parseDate(val('from'));
+      var t = A.parseDate(val('to') || val('from'));
+      var days = A.datesToDays(f, t);
+      $('datenote').innerHTML = A.fmtDate(f) + ' — день ' + A.dateToDay(f) +
+        (days.length > 1 ? ', дни цикла: <b>' + A.daysLabel(days) + '</b>' : ' (день 1 цикла — 16.11.2026)');
+    } catch (e) {
+      $('datenote').textContent = 'День 1 цикла — 16.11.2026';
+    }
+  }
+
+  function currentDays() {
+    if (mode === 'dates') {
+      var f = A.parseDate(val('from'));
+      var t = A.parseDate(val('to') || val('from'));
+      return { days: A.datesToDays(f, t), label: A.fmtDate(f) + (val('to') ? ' – ' + A.fmtDate(t) : '') };
+    }
+    var days = A.parseDays(val('days'));
+    if (!days.length) throw new Error('Укажи дни, например 1-3');
+    return { days: days, label: A.daysLabel(days) };
+  }
+
+  function render() {
+    var err = $('err'), out = $('out');
+    try {
+      var res = currentDays();
+      var days = res.days;
+      var people = { 'Завтрак': num('b'), 'Обед': num('l'), 'Ужин': num('d') };
+      if (!people['Завтрак'] && !people['Обед'] && !people['Ужин'])
+        throw new Error('Укажи, сколько человек едят');
+      var reserve = num('reserve');
+      if (reserve < 0) throw new Error('Запас не может быть отрицательным');
+
+      var items = A.calc(D.menu, D.recipes, days, people, reserve);
+      var g = A.groupOrder(items, D.categories, D.units);
+      if (!g.used) throw new Error('Заказ пустой — проверь дни и число людей');
+
+      err.textContent = '';
+      out.classList.remove('hidden');
+
+      var peopleTxt = ['Завтрак', 'Обед', 'Ужин']
+        .filter(function (m) { return people[m]; })
+        .map(function (m) { return m.toLowerCase() + ' ' + people[m]; })
+        .join(' · ');
+      $('head').innerHTML = 'Заказ на <b>' + res.label + '</b><br>Люди: ' + peopleTxt +
+        (reserve ? ' + запас ' + reserve : '');
+
+      var html = '';
+      g.groups.forEach(function (cat) {
+        html += '<div class="cat">' + cat.title + '</div>';
+        cat.items.forEach(function (it) {
+          html += '<div class="item"><span>' + it.name + '</span><span class="qty">' +
+                  it.qty + ' ' + it.unit + '</span></div>';
+        });
+      });
+      $('list').innerHTML = html;
+      $('total').textContent = 'Позиций: ' + g.used;
+
+      lastText = 'Заказ на ' + res.label + '\nЛюди: ' + peopleTxt +
+                 (reserve ? ' + запас ' + reserve : '') + '\n\n';
+      g.groups.forEach(function (cat) {
+        lastText += cat.title + '\n';
+        cat.items.forEach(function (it) { lastText += '  ' + it.name + ' — ' + it.qty + ' ' + it.unit + '\n'; });
+        lastText += '\n';
+      });
+      lastText += 'Позиций: ' + g.used;
+    } catch (e) {
+      err.textContent = e.message;
+      out.classList.add('hidden');
+    }
+  }
+
+  $('tab-days').addEventListener('click', function () { setMode('days'); });
+  $('tab-dates').addEventListener('click', function () { setMode('dates'); });
+  $('go').addEventListener('click', render);
+  ['days', 'b', 'l', 'd', 'reserve', 'from', 'to'].forEach(function (id) {
+    $(id).addEventListener('keydown', function (ev) { if (ev.key === 'Enter') render(); });
+  });
+  ['from', 'to'].forEach(function (id) {
+    $(id).addEventListener('input', updateDateNote);
+  });
+
+  $('copy').addEventListener('click', function () {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(lastText).then(function () {
+        $('copy').textContent = 'Скопировано ✓';
+        setTimeout(function () { $('copy').textContent = 'Скопировать список'; }, 1500);
+      });
+    }
+  });
+
+  // пример по умолчанию
+  $('days').value = '1-3';
+  setMode('dates');
+})();
+</script>
+</body>
+</html>
