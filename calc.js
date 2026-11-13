@@ -168,4 +168,120 @@
     }
     return days;
   }
+
+  // ---------- меню недели ----------
+  var WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+  function weekDays(baseDate) {
+    var wd = (baseDate.getDay() + 6) % 7;   // 0 = понедельник
+    var out = [];
+    for (var i = 0; i < 7; i++) {
+      var d = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() - wd + i);
+      out.push({ date: d, day: dateToDay(d), name: WEEKDAYS[i] });
+    }
+    return out;
+  }
+
+  function menuFor(day, menu) {
+    var meals = { 'Завтрак': [], 'Обед': [], 'Ужин': [] };
+    for (var i = 0; i < menu.length; i++) {
+      var r = menu[i];
+      if (r.day_no === day && meals[r.meal]) meals[r.meal].push(r.dish);
+    }
+    return meals;
+  }
+
+  // ---------- техкарты ----------
+  var RU_ENDINGS = ['ая', 'яя', 'ый', 'ий', 'ой', 'ые', 'ие', 'ов', 'ев', 'ам', 'ем', 'ом',
+                    'ах', 'ях', 'а', 'я', 'ы', 'и', 'у', 'ю', 'е', 'о', 'ь'];
+  var STOP = { 'под': 1, 'для': 1, 'при': 1, 'над': 1, 'без': 1, 'про': 1, 'порц': 1,
+               'гр': 1, 'кг': 1, 'шт': 1, 'мл': 1, 'порции': 1, 'из': 1, 'с': 1, 'в': 1,
+               'на': 1, 'от': 1, 'по': 1, 'до': 1, 'к': 1, 'и': 1, 'не': 1, 'со': 1,
+               'об': 1, 'о': 1, 'у': 1, 'а': 1, 'же': 1, 'ли': 1 };
+  var SYNO = { 'картошка': 'картофель', 'картошечка': 'картофель', 'гречка': 'греча',
+               'курица': 'кура', 'курочка': 'кура' };
+
+  function stem(w) {
+    for (var i = 0; i < RU_ENDINGS.length; i++) {
+      var e = RU_ENDINGS[i];
+      if (w.length - e.length >= 3 && w.slice(-e.length) === e) return w.slice(0, -e.length);
+    }
+    return w;
+  }
+
+  function keyWords(text) {
+    var words = norm(text).split(/[^а-яёa-z0-9]+/).filter(function (w) { return w.length >= 2; });
+    var out = {};
+    words.forEach(function (w) {
+      w = SYNO[w] || w;
+      if (STOP[w]) return;
+      out[stem(w)] = 1;
+    });
+    return Object.keys(out);
+  }
+
+  function wordsMatch(a, b) {
+    if (a === b) return true;
+    var shortest = Math.min(a.length, b.length);
+    if (shortest < 3) return false;
+    if (a.indexOf(b) === 0 || b.indexOf(a) === 0) return true;
+    var n = shortest >= 5 ? 4 : 3;
+    return a.slice(0, n) === b.slice(0, n);
+  }
+
+  function findCards(q, cards) {
+    var t = norm(q).trim();
+    if (!t) return [];
+
+    var exact = cards.filter(function (c) {
+      var n = norm(c.dish);
+      return (' ' + n + ' ').indexOf(' ' + t + ' ') >= 0;
+    });
+    if (exact.length) return exact;
+
+    var words = keyWords(t);
+    if (!words.length) return [];
+
+    var scored = [];
+    cards.forEach(function (c) {
+      var nw = keyWords(c.dish);
+      if (!nw.length) return;
+      var hits = nw.filter(function (w) {
+        return words.some(function (q) { return wordsMatch(w, q); });
+      }).length;
+      if (hits) scored.push({ c: c, hits: hits, ratio: hits / nw.length });
+    });
+    if (!scored.length) return [];
+    scored.sort(function (a, b) { return b.hits - a.hits || b.ratio - a.ratio; });
+    var best = scored[0].hits;
+    return scored.filter(function (s) { return s.hits === best; })
+      .map(function (s) { return s.c; }).slice(0, 20);
+  }
+
+  function fmtQty(q, unit) {
+    if (unit === 'шт') return String(Math.ceil(q - 1e-9)) + ' шт';
+    if (unit === 'кг' || unit === 'л') {
+      if (q < 1) return String(Math.round(q * 1000)) + (unit === 'кг' ? ' г' : ' мл');
+      var s = q.toFixed(2).replace(/\.?0+$/, '');
+      return s.replace('.', ',') + ' ' + unit;
+    }
+    return String(Math.round(q * 1000) / 1000) + ' ' + (unit || '');
+  }
+
+  function cardText(card, portions) {
+    var per = card.per || 1;
+    var lines = [card.dish + (card.output ? ' (' + card.output + ')' : ''),
+                 'На ' + portions + ' порций:', ''];
+    card.ing.forEach(function (it) {
+      lines.push('  ' + it[0] + ' — ' + fmtQty(it[2] * portions / per, it[1]));
+    });
+    return lines.join('\n');
+  }
+
+  var A = window.APP;
+  A.weekDays = weekDays;
+  A.menuFor = menuFor;
+  A.findCards = findCards;
+  A.fmtQty = fmtQty;
+  A.cardText = cardText;
 })();

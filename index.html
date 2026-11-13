@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Заказ продуктов</title>
+<title>Кухня</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   :root {
@@ -17,11 +17,17 @@
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
-    margin: 0; padding: 12px 12px 32px;
+    margin: 0; padding: 10px 12px 32px;
     background: var(--bg); color: var(--text);
     font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
-  h1 { font-size: 19px; margin: 4px 0 14px; font-weight: 600; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; position: sticky; top: 0; background: var(--bg); padding: 6px 0; z-index: 5; }
+  .tab {
+    flex: 1; padding: 10px 6px; font-size: 14px; font-weight: 600;
+    color: var(--hint); background: rgba(255, 255, 255, .05);
+    border: none; border-radius: 10px;
+  }
+  .tab.active { color: var(--accent-text); background: var(--accent); }
   .card { background: var(--card); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
   label { display: block; font-size: 13px; color: var(--hint); margin-bottom: 6px; }
   input {
@@ -32,20 +38,15 @@
   input:focus { border-color: var(--accent); }
   .row { display: flex; gap: 8px; }
   .row > div { flex: 1; }
-  .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
-  .tab {
-    flex: 1; padding: 9px 6px; font-size: 14px; font-weight: 500;
-    color: var(--hint); background: rgba(255, 255, 255, .05);
-    border: none; border-radius: 10px; width: auto; margin: 0;
-  }
-  .tab.active { color: var(--accent-text); background: var(--accent); }
-  button {
+  .subtabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .subtabs .tab { font-size: 13px; padding: 8px 4px; }
+  button.go {
     width: 100%; padding: 14px; margin-top: 4px; font-size: 16px; font-weight: 600;
-    color: var(--accent-text); background: var(--accent);
-    border: none; border-radius: 12px;
+    color: var(--accent-text); background: var(--accent); border: none; border-radius: 12px;
   }
-  button:active { opacity: .85; }
-  button.ghost { background: rgba(255, 255, 255, .08); color: var(--text); margin-top: 10px; }
+  button.go:active { opacity: .85; }
+  button.ghost { background: rgba(255, 255, 255, .08); color: var(--text); }
+  .mini { font-size: 13px; }
   .err { color: #ff8a80; font-size: 14px; margin-top: 8px; min-height: 18px; }
   .head { font-size: 15px; margin: 14px 0 8px; color: var(--hint); }
   .head b { color: var(--text); font-weight: 600; }
@@ -57,17 +58,49 @@
   .hidden { display: none; }
   .tip { font-size: 12px; color: var(--hint); margin-top: 6px; }
   .tip b { color: var(--accent); font-weight: 600; }
+
+  /* меню */
+  .dayhead { font-weight: 600; font-size: 15px; margin-bottom: 8px; }
+  .dayhead span { color: var(--hint); font-weight: 400; font-size: 13px; }
+  .today { border: 1px solid var(--accent); }
+  .meal { padding: 6px 0; border-top: 1px solid var(--line); }
+  .meal:first-of-type { border-top: none; }
+  .mlabel { color: var(--hint); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; display: block; margin-bottom: 2px; }
+  .dish { padding: 1px 0; }
+  .weeknav { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; }
+  .weeknav input { flex: 1; text-align: center; }
+  .weeknav button { width: 44px; height: 42px; font-size: 18px; border: none; border-radius: 10px; background: rgba(255,255,255,.08); color: var(--text); }
+
+  /* карты */
+  .catbtn {
+    display: block; width: 100%; text-align: left; padding: 11px 12px; margin-bottom: 6px;
+    font-size: 15px; color: var(--text); background: rgba(255, 255, 255, .06);
+    border: none; border-radius: 10px; font-weight: 400;
+  }
+  .cardbtn {
+    display: block; width: 100%; text-align: left; padding: 10px 12px; margin-bottom: 6px;
+    font-size: 14px; color: var(--text); background: rgba(255, 255, 255, .05);
+    border: none; border-radius: 10px;
+  }
+  .coutput { color: var(--hint); font-size: 12px; }
 </style>
 </head>
 <body>
-  <h1>Заказ продуктов</h1>
+
+<div class="tabs">
+  <button class="tab active" id="tab-order">Заказ</button>
+  <button class="tab" id="tab-menu">Меню</button>
+  <button class="tab" id="tab-cards">Карты</button>
+</div>
+
+<!-- ================= ЗАКАЗ ================= -->
+<div id="screen-order">
+  <div class="subtabs">
+    <button class="tab active" id="sub-dates">Даты</button>
+    <button class="tab" id="sub-days">Дни цикла</button>
+  </div>
 
   <div class="card">
-    <div class="tabs">
-      <button class="tab active" data-mode="dates" id="tab-dates">Даты</button>
-      <button class="tab" data-mode="days" id="tab-days">Дни цикла</button>
-    </div>
-
     <div id="mode-dates">
       <label>С какого и по какое число</label>
       <div class="row">
@@ -76,7 +109,6 @@
       </div>
       <div class="tip" id="datenote">День 1 цикла — 16.11.2026</div>
     </div>
-
     <div id="mode-days" class="hidden">
       <label>Дни (например 15-17, 1,3,5 или 28-3)</label>
       <input id="days" inputmode="numeric" placeholder="1-3" autocomplete="off">
@@ -97,15 +129,52 @@
     </div>
   </div>
 
-  <button id="go">Посчитать</button>
+  <button class="go" id="go">Посчитать</button>
   <div class="err" id="err"></div>
 
   <div id="out" class="hidden">
     <div class="head" id="head"></div>
     <div id="list"></div>
     <div class="total" id="total"></div>
-    <button class="ghost" id="copy">Скопировать список</button>
+    <button class="go ghost" id="copy">Скопировать список</button>
   </div>
+</div>
+
+<!-- ================= МЕНЮ ================= -->
+<div id="screen-menu" class="hidden">
+  <div class="weeknav">
+    <button id="prevWeek">◀</button>
+    <input id="weekDate" inputmode="numeric" placeholder="13.11" autocomplete="off">
+    <button id="nextWeek">▶</button>
+  </div>
+  <div class="tip" id="weeknote" style="margin:-4px 0 10px"></div>
+  <div id="menuList"></div>
+</div>
+
+<!-- ================= КАРТЫ ================= -->
+<div id="screen-cards" class="hidden">
+  <div class="card">
+    <div class="row">
+      <div style="flex:2"><input id="cardQuery" placeholder="шницель куриный" autocomplete="off"></div>
+      <div><button class="go" id="cardSearch">Найти</button></div>
+    </div>
+    <div class="tip" id="cardNote"></div>
+  </div>
+
+  <div id="cardCats"></div>
+  <div id="cardList"></div>
+
+  <div id="cardView" class="hidden">
+    <div class="card">
+      <div class="dayhead" id="cardName"></div>
+      <div class="row" style="margin-top:8px">
+        <div style="flex:2"><input id="portions" inputmode="numeric" placeholder="Сколько порций" autocomplete="off"></div>
+        <div><button class="go" id="cardCalc">Показать</button></div>
+      </div>
+    </div>
+    <div id="cardOut"></div>
+  </div>
+</div>
 
 <script src="data.js"></script>
 <script src="calc.js"></script>
@@ -116,35 +185,47 @@
   if (tg) { tg.ready(); tg.expand(); }
 
   var $ = function (id) { return document.getElementById(id); };
-  var lastText = '';
-  var mode = 'dates';
-
   function val(id) { return ($(id).value || '').trim(); }
   function num(id) { var v = val(id); return v === '' ? 0 : parseInt(v, 10) || 0; }
 
-  function setMode(m) {
-    mode = m;
-    $('tab-days').classList.toggle('active', m === 'days');
-    $('tab-dates').classList.toggle('active', m === 'dates');
-    $('mode-days').classList.toggle('hidden', m !== 'days');
-    $('mode-dates').classList.toggle('hidden', m !== 'dates');
+  // ---------- экраны ----------
+  function showScreen(name) {
+    ['order', 'menu', 'cards'].forEach(function (n) {
+      $('screen-' + n).classList.toggle('hidden', n !== name);
+      $('tab-' + n).classList.toggle('active', n === name);
+    });
   }
+  $('tab-order').addEventListener('click', function () { showScreen('order'); });
+  $('tab-menu').addEventListener('click', function () { showScreen('menu'); renderMenu(); });
+  $('tab-cards').addEventListener('click', function () { showScreen('cards'); renderCardCats(); });
 
-  // подсказка: какие дни цикла получаются из дат
+  // ================= ЗАКАЗ =================
+  var lastText = '', orderMode = 'dates';
+
+  function setOrderMode(m) {
+    orderMode = m;
+    $('sub-dates').classList.toggle('active', m === 'dates');
+    $('sub-days').classList.toggle('active', m === 'days');
+    $('mode-dates').classList.toggle('hidden', m !== 'dates');
+    $('mode-days').classList.toggle('hidden', m !== 'days');
+  }
+  $('sub-dates').addEventListener('click', function () { setOrderMode('dates'); });
+  $('sub-days').addEventListener('click', function () { setOrderMode('days'); });
+
   function updateDateNote() {
     try {
       var f = A.parseDate(val('from'));
       var t = A.parseDate(val('to') || val('from'));
       var days = A.datesToDays(f, t);
       $('datenote').innerHTML = A.fmtDate(f) + ' — день ' + A.dateToDay(f) +
-        (days.length > 1 ? ', дни цикла: <b>' + A.daysLabel(days) + '</b>' : ' (день 1 цикла — 16.11.2026)');
+        (days.length > 1 ? ', дни цикла: <b>' + A.daysLabel(days) + '</b>' : '');
     } catch (e) {
       $('datenote').textContent = 'День 1 цикла — 16.11.2026';
     }
   }
 
   function currentDays() {
-    if (mode === 'dates') {
+    if (orderMode === 'dates') {
       var f = A.parseDate(val('from'));
       var t = A.parseDate(val('to') || val('from'));
       return { days: A.datesToDays(f, t), label: A.fmtDate(f) + (val('to') ? ' – ' + A.fmtDate(t) : '') };
@@ -154,18 +235,17 @@
     return { days: days, label: A.daysLabel(days) };
   }
 
-  function render() {
+  function renderOrder() {
     var err = $('err'), out = $('out');
     try {
       var res = currentDays();
-      var days = res.days;
       var people = { 'Завтрак': num('b'), 'Обед': num('l'), 'Ужин': num('d') };
       if (!people['Завтрак'] && !people['Обед'] && !people['Ужин'])
         throw new Error('Укажи, сколько человек едят');
       var reserve = num('reserve');
       if (reserve < 0) throw new Error('Запас не может быть отрицательным');
 
-      var items = A.calc(D.menu, D.recipes, days, people, reserve);
+      var items = A.calc(D.menu, D.recipes, res.days, people, reserve);
       var g = A.groupOrder(items, D.categories, D.units);
       if (!g.used) throw new Error('Заказ пустой — проверь дни и число людей');
 
@@ -204,16 +284,8 @@
     }
   }
 
-  $('tab-days').addEventListener('click', function () { setMode('days'); });
-  $('tab-dates').addEventListener('click', function () { setMode('dates'); });
-  $('go').addEventListener('click', render);
-  ['days', 'b', 'l', 'd', 'reserve', 'from', 'to'].forEach(function (id) {
-    $(id).addEventListener('keydown', function (ev) { if (ev.key === 'Enter') render(); });
-  });
-  ['from', 'to'].forEach(function (id) {
-    $(id).addEventListener('input', updateDateNote);
-  });
-
+  $('go').addEventListener('click', renderOrder);
+  ['from', 'to'].forEach(function (id) { $(id).addEventListener('input', updateDateNote); });
   $('copy').addEventListener('click', function () {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(lastText).then(function () {
@@ -223,9 +295,122 @@
     }
   });
 
-  // пример по умолчанию
+  // ================= МЕНЮ =================
+  var menuBase = new Date();
+
+  function renderMenu() {
+    var days = A.weekDays(menuBase);
+    var today = new Date();
+    var html = '';
+    $('weeknote').innerHTML = 'День 1 цикла — 16.11.2026';
+    days.forEach(function (d) {
+      var meals = A.menuFor(d.day, D.menu);
+      var isToday = d.date.getDate() === today.getDate() &&
+                    d.date.getMonth() === today.getMonth() &&
+                    d.date.getFullYear() === today.getFullYear();
+      html += '<div class="card' + (isToday ? ' today' : '') + '">' +
+              '<div class="dayhead">' + d.name + ', ' + A.fmtDate(d.date) +
+              ' <span>· день ' + d.day + (isToday ? ' · сегодня' : '') + '</span></div>';
+      ['Завтрак', 'Обед', 'Ужин'].forEach(function (m) {
+        if (meals[m].length) {
+          html += '<div class="meal"><span class="mlabel">' + m + '</span>' +
+                  meals[m].map(function (x) { return '<div class="dish">' + x + '</div>'; }).join('') +
+                  '</div>';
+        }
+      });
+      html += '</div>';
+    });
+    $('menuList').innerHTML = html;
+    $('weekDate').value = A.fmtDate(days[0].date).slice(0, 5) + ' – ' + A.fmtDate(days[6].date).slice(0, 5);
+  }
+
+  $('prevWeek').addEventListener('click', function () {
+    menuBase = new Date(menuBase.getFullYear(), menuBase.getMonth(), menuBase.getDate() - 7);
+    renderMenu();
+  });
+  $('nextWeek').addEventListener('click', function () {
+    menuBase = new Date(menuBase.getFullYear(), menuBase.getMonth(), menuBase.getDate() + 7);
+    renderMenu();
+  });
+  $('weekDate').addEventListener('change', function () {
+    try { menuBase = A.parseDate(val('weekDate')); renderMenu(); } catch (e) { renderMenu(); }
+  });
+
+  // ================= КАРТЫ =================
+  var curCard = null;
+
+  function renderCardCats() {
+    var html = '';
+    D.card_categories.forEach(function (cat, i) {
+      html += '<button class="catbtn" data-cat="' + i + '">' + cat[0] + '</button>';
+    });
+    $('cardCats').innerHTML = html;
+    Array.prototype.forEach.call($('cardCats').children, function (btn) {
+      btn.addEventListener('click', function () {
+        var idx = parseInt(btn.getAttribute('data-cat'), 10);
+        var pages = D.card_categories[idx][1];
+        var list = D.cards.filter(function (c) { return pages.indexOf(c.page) >= 0; });
+        $('cardNote').textContent = D.card_categories[idx][0];
+        renderCardList(list);
+      });
+    });
+  }
+
+  function renderCardList(list) {
+    var html = '';
+    list.forEach(function (c) {
+      html += '<button class="cardbtn" data-page="' + c.page + '">' + c.dish +
+              (c.output ? ' <span class="coutput">' + c.output + '</span>' : '') + '</button>';
+    });
+    $('cardList').innerHTML = html || '<div class="tip">Ничего не нашлось</div>';
+    Array.prototype.forEach.call($('cardList').children, function (btn) {
+      btn.addEventListener('click', function () {
+        var page = parseInt(btn.getAttribute('data-page'), 10);
+        openCard(D.cards.filter(function (c) { return c.page === page; })[0]);
+      });
+    });
+  }
+
+  function openCard(card) {
+    curCard = card;
+    $('cardView').classList.remove('hidden');
+    $('cardName').innerHTML = card.dish + (card.output ? ' <span class="coutput">' + card.output + '</span>' : '');
+    $('cardOut').innerHTML = '';
+    $('portions').value = '';
+    $('portions').focus();
+  }
+
+  function renderCardOut() {
+    if (!curCard) return;
+    var n = num('portions');
+    if (!(n > 0)) { $('cardOut').innerHTML = '<div class="err">Напиши число порций больше нуля</div>'; return; }
+    var per = curCard.per || 1;
+    var lines = curCard.ing.map(function (it) {
+      return '<div class="item"><span>' + it[0] + '</span><span class="qty">' +
+             A.fmtQty(it[2] * n / per, it[1]) + '</span></div>';
+    }).join('');
+    $('cardOut').innerHTML = '<div class="card"><div class="head">На ' + n + ' порций</div>' + lines + '</div>';
+  }
+
+  $('cardSearch').addEventListener('click', function () {
+    var q = val('cardQuery');
+    if (!q) { $('cardNote').textContent = 'Напиши название блюда'; return; }
+    var list = A.findCards(q, D.cards);
+    $('cardNote').textContent = list.length ? 'Найдено: ' + list.length : 'Не нашёл такое блюдо';
+    renderCardList(list);
+  });
+  $('cardQuery').addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter') $('cardSearch').click();
+  });
+  $('cardCalc').addEventListener('click', renderCardOut);
+  $('portions').addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter') renderCardOut();
+  });
+
+  // ---------- старт ----------
   $('days').value = '1-3';
-  setMode('dates');
+  setOrderMode('dates');
+  renderMenu();
 })();
 </script>
 </body>
