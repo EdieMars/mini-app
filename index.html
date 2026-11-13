@@ -32,11 +32,20 @@
   /* бледный кухонный узор: ложка, вилка, чашка, нож */
   :root {
     --pattern: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'><g fill='none' stroke='%23ffffff' stroke-opacity='0.045' stroke-width='1.6' stroke-linecap='round'><path d='M40 26v30a10 10 0 0 0 20 0V26'/><path d='M50 26v66'/><circle cx='150' cy='40' r='12'/><path d='M150 52v40'/><path d='M96 30h26v14a13 13 0 0 1-13 13h0a13 13 0 0 1-13-13z'/><path d='M109 57v35'/><path d='M186 120l-16 16 8 8 16-16z'/><path d='M162 144l-8 8 10 10 8-8'/><path d='M36 150c0-12 10-22 22-22s22 10 22 22-10 22-22 22-22-10-22-22z'/><path d='M58 172v26'/><path d='M120 130v46'/><path d='M120 130c0-8 6-14 14-14s14 6 14 14-6 14-14 14-14-6-14-14z'/></g></svg>");
+    --pattern-light: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'><g fill='none' stroke='%23000000' stroke-opacity='0.05' stroke-width='1.6' stroke-linecap='round'><path d='M40 26v30a10 10 0 0 0 20 0V26'/><path d='M50 26v66'/><circle cx='150' cy='40' r='12'/><path d='M150 52v40'/><path d='M96 30h26v14a13 13 0 0 1-13 13h0a13 13 0 0 1-13-13z'/><path d='M109 57v35'/><path d='M186 120l-16 16 8 8 16-16z'/><path d='M162 144l-8 8 10 10 8-8'/><path d='M36 150c0-12 10-22 22-22s22 10 22 22-10 22-22 22-22-10-22-22z'/><path d='M58 172v26'/><path d='M120 130v46'/><path d='M120 130c0-8 6-14 14-14s14 6 14 14-6 14-14 14-14-6-14-14z'/></g></svg>");
   }
   body {
     margin: 0;
     padding: max(10px, env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));
     background: var(--bg);
+    background: var(--pattern) repeat, var(--bg);
+    color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    letter-spacing: .01em;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* тёмная тема — мягкий градиент поверх узора */
+  body:not(.light) {
     background:
       var(--pattern) repeat,
       radial-gradient(130% 60% at 50% -20%, rgba(140,170,205,.07), transparent 55%),
@@ -46,10 +55,11 @@
         var(--bg) 45%,
         color-mix(in srgb, var(--bg) 93%, black) 100%);
     background-attachment: fixed, fixed, fixed, fixed;
-    color: var(--text);
-    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    letter-spacing: .01em;
-    -webkit-font-smoothing: antialiased;
+  }
+  /* светлая тема — только узор, без тёмных градиентов */
+  body.light {
+    background: var(--pattern-light) repeat, var(--bg);
+    background-attachment: fixed, fixed;
   }
   button, input { font: inherit; }
   button { cursor: pointer; touch-action: manipulation; }
@@ -282,6 +292,7 @@
     <input id="weekDate" inputmode="numeric" placeholder="13.11" autocomplete="off">
     <button id="nextWeek" aria-label="Следующая неделя">▶</button>
   </div>
+  <button class="catbtn back" id="thisWeek" style="margin:0 0 8px">Сегодня</button>
   <div class="tip" id="weeknote" style="margin:-4px 0 12px"></div>
   <div id="menuList"></div>
 </div>
@@ -324,6 +335,10 @@
   var A = window.APP, D = window.DATA;
   var tg = window.Telegram && window.Telegram.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
+  // светлая или тёмная — как в Telegram (в браузере — как в системе)
+  var scheme = (tg && tg.colorScheme) ||
+    (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.body.classList.toggle('light', scheme === 'light');
 
   var $ = function (id) { return document.getElementById(id); };
   function val(id) { return ($(id).value || '').trim(); }
@@ -477,6 +492,10 @@
   });
   $('weekDate').addEventListener('change', function () {
     try { menuBase = A.parseDate(val('weekDate')); renderMenu(); } catch (e) { renderMenu(); }
+  });
+  $('thisWeek').addEventListener('click', function () {
+    menuBase = new Date();
+    renderMenu();
   });
 
   // ================= КАРТЫ =================
