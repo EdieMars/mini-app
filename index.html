@@ -229,6 +229,26 @@
 
   /* ── сегодняшний день читается сразу ── */
   .daycard.today { border-left: 3px solid color-mix(in srgb, var(--accent) 85%, white); }
+  /* ── печать заказа: белый лист A4, только заголовок и список ── */
+  @media print {
+    @page { size: A4; margin: 14mm; }
+    body {
+      background: #fff !important; color: #000; font-size: 12pt;
+      padding: 0; max-width: none; letter-spacing: normal;
+    }
+    .tabs, .subtabs, .weeknav, button, input, label, .tip, .err { display: none !important; }
+    .card, .daycard, .daycard.today {
+      background: none; border: none; box-shadow: none;
+      padding: 0; margin: 0 0 10px; animation: none;
+    }
+    .card, .daycard, .catbtn, .cardbtn, .item, .head, .total { animation: none; }
+    .cat { color: #000; margin: 14px 0 4px; }
+    .item { border-bottom: 1px solid #bbb; padding: 5px 0; }
+    .qty, .head, .head b, .total, .mlabel, .dayhead, .dayhead span,
+    .dishrow .num, .dishrow .out, .coutput { color: #000; }
+    .dayhead { font-size: 12pt; margin-bottom: 4px; }
+  }
+
   @media (min-width: 620px) {
     body { max-width: 760px; margin: 0 auto; }
     .days { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -280,6 +300,7 @@
   </div>
 
   <button class="go" id="go">Посчитать</button>
+  <button class="go ghost mini" id="reset">Сбросить</button>
   <div class="err" id="err"></div>
 
   <div id="out" class="hidden">
@@ -287,6 +308,7 @@
     <div id="list"></div>
     <div class="total" id="total"></div>
     <button class="go ghost" id="copy">Скопировать список</button>
+    <button class="go ghost" id="print">Печать / PDF</button>
   </div>
 </div>
 
@@ -363,6 +385,48 @@
   // ================= ЗАКАЗ =================
   var lastText = '', orderMode = 'dates';
 
+  // ---------- запоминание ввода ----------
+  var LS_ORDER = 'kitchen.order', LS_WEEK = 'kitchen.menuWeek';
+
+  function saveOrder() {
+    try {
+      localStorage.setItem(LS_ORDER, JSON.stringify({
+        mode: orderMode, from: val('from'), to: val('to'), days: val('days'),
+        b: val('b'), l: val('l'), d: val('d'), reserve: val('reserve')
+      }));
+    } catch (e) {}
+  }
+
+  function restoreOrder() {
+    var s = null;
+    try { s = JSON.parse(localStorage.getItem(LS_ORDER) || 'null'); } catch (e) {}
+    if (!s) { setOrderMode('dates'); updateDateNote(); return; }
+    ['from', 'to', 'days', 'b', 'l', 'd', 'reserve'].forEach(function (id) {
+      if (typeof s[id] === 'string') $(id).value = s[id];
+    });
+    setOrderMode(s.mode === 'days' ? 'days' : 'dates');
+    updateDateNote();
+  }
+
+  function resetOrder() {
+    $('from').value = '16.11'; $('to').value = '18.11'; $('days').value = '1-3';
+    $('b').value = '40'; $('l').value = '40'; $('d').value = '25'; $('reserve').value = '0';
+    setOrderMode('dates');
+    updateDateNote();
+    saveOrder();
+  }
+
+  function readSavedWeek() {
+    try {
+      var s = localStorage.getItem(LS_WEEK);
+      if (s) {
+        var d = new Date(s);
+        if (!isNaN(d.getTime())) return d;
+      }
+    } catch (e) {}
+    return new Date();
+  }
+
   function setOrderMode(m) {
     orderMode = m;
     $('sub-dates').classList.toggle('active', m === 'dates');
@@ -370,8 +434,8 @@
     $('mode-dates').classList.toggle('hidden', m !== 'dates');
     $('mode-days').classList.toggle('hidden', m !== 'days');
   }
-  $('sub-dates').addEventListener('click', function () { setOrderMode('dates'); });
-  $('sub-days').addEventListener('click', function () { setOrderMode('days'); });
+  $('sub-dates').addEventListener('click', function () { setOrderMode('dates'); saveOrder(); });
+  $('sub-days').addEventListener('click', function () { setOrderMode('days'); saveOrder(); });
 
   function updateDateNote() {
     try {
@@ -447,6 +511,10 @@
 
   $('go').addEventListener('click', renderOrder);
   ['from', 'to'].forEach(function (id) { $(id).addEventListener('input', updateDateNote); });
+  ['from', 'to', 'days', 'b', 'l', 'd', 'reserve'].forEach(function (id) {
+    $(id).addEventListener('input', saveOrder);
+  });
+  $('reset').addEventListener('click', resetOrder);
   $('copy').addEventListener('click', function () {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(lastText).then(function () {
@@ -455,6 +523,7 @@
       });
     }
   });
+  $('print').addEventListener('click', function () { window.print(); });
 
   // ================= МЕНЮ =================
   var menuBase = new Date();
@@ -485,6 +554,7 @@
     html += '</div>';
     $('menuList').innerHTML = html;
     $('weekDate').value = A.fmtDate(days[0].date).slice(0, 5) + ' – ' + A.fmtDate(days[6].date).slice(0, 5);
+    try { localStorage.setItem(LS_WEEK, menuBase.toISOString()); } catch (e) {}
   }
 
   $('prevWeek').addEventListener('click', function () {
@@ -601,7 +671,8 @@
 
   // ---------- старт ----------
   $('days').value = '1-3';
-  setOrderMode('dates');
+  menuBase = readSavedWeek();
+  restoreOrder();
   renderMenu();
 })();
 </script>
