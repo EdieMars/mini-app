@@ -409,8 +409,8 @@
   }
 
   function resetOrder() {
-    $('from').value = '16.11'; $('to').value = '18.11'; $('days').value = '1-3';
-    $('b').value = '40'; $('l').value = '40'; $('d').value = '25'; $('reserve').value = '0';
+    // «Сбросить» очищает поля, а не подставляет демо-значения
+    ['from', 'to', 'days', 'b', 'l', 'd', 'reserve'].forEach(function (id) { $(id).value = ''; });
     setOrderMode('dates');
     updateDateNote();
     saveOrder();
