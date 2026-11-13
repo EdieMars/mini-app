@@ -18,12 +18,29 @@
     --line: rgba(255,255,255,.09);
     --soft: rgba(255,255,255,.045);
     --shadow: 0 8px 24px rgba(0,0,0,.18);
+    /* мягкие акценты разделов карт */
+    --c0: #dd8a72; /* вторые блюда */
+    --c1: #8cbd85; /* салаты и закуски */
+    --c2: #cdb06a; /* гарниры */
+    --c3: #d96a5c; /* супы */
+    --c4: #a8c4da; /* каши и завтраки */
+    --c5: #cf9a5e; /* бутерброды и выпечка */
+    --c6: #b69ad0; /* напитки и добавки */
+    --c7: #7db6c6; /* полуфабрикаты */
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
     margin: 0;
     padding: max(10px, env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));
     background: var(--bg);
+    background:
+      radial-gradient(130% 60% at 50% -20%, rgba(140,170,205,.07), transparent 55%),
+      radial-gradient(120% 70% at 100% 110%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 60%),
+      linear-gradient(180deg,
+        color-mix(in srgb, var(--bg) 96%, white) 0%,
+        var(--bg) 45%,
+        color-mix(in srgb, var(--bg) 93%, black) 100%);
+    background-attachment: fixed;
     color: var(--text);
     font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     letter-spacing: .01em;
@@ -43,7 +60,10 @@
     background: var(--soft); border: 1px solid transparent; border-radius: 13px;
     transition: background .16s ease, color .16s ease, transform .12s ease;
   }
-  .tab:active, button:active { transform: scale(.98); }
+  .tab:active, button:active { transform: scale(.965); }
+  button.go, .catbtn, .cardbtn, .weeknav button {
+    transition: transform .12s ease, opacity .12s ease, background .16s ease, border-color .16s ease;
+  }
   .tab.active {
     color: var(--accent-text); background: var(--accent);
     box-shadow: 0 4px 12px rgba(0,0,0,.18);
@@ -110,8 +130,8 @@
   }
   .daycard.today .dayhead { color: var(--accent); }
   .mlabel {
-    color: var(--hint); font-size: 10px; font-weight: 750; text-transform: uppercase;
-    letter-spacing: .1em; margin: 12px 0 4px;
+    color: var(--hint); font-size: 12px; font-weight: 750; text-transform: uppercase;
+    letter-spacing: .08em; margin: 12px 0 4px;
   }
   .dishrow { display: flex; align-items: baseline; font-size: 13px; line-height: 1.45; padding: 3px 0; }
   .dishrow .num { color: var(--hint); width: 20px; flex: none; font-variant-numeric: tabular-nums; }
@@ -143,6 +163,52 @@
     border-radius: 13px;
   }
   .coutput { color: var(--hint); font-size: 12px; font-weight: 500; }
+
+  /* ── плавное появление карточек и списков ── */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(9px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .card, .daycard, .catbtn, .cardbtn, .item, .head, .total { animation: rise .2s ease both; }
+  .days .daycard:nth-child(2) { animation-delay: .04s; }
+  .days .daycard:nth-child(3) { animation-delay: .07s; }
+  .days .daycard:nth-child(4) { animation-delay: .10s; }
+  .days .daycard:nth-child(5) { animation-delay: .13s; }
+  .days .daycard:nth-child(6) { animation-delay: .16s; }
+  .days .daycard:nth-child(7) { animation-delay: .19s; }
+  #cardCats .catbtn:nth-child(2), #cardList .cardbtn:nth-child(2), #list .item:nth-child(2) { animation-delay: .03s; }
+  #cardCats .catbtn:nth-child(3), #cardList .cardbtn:nth-child(3), #list .item:nth-child(3) { animation-delay: .06s; }
+  #cardCats .catbtn:nth-child(4), #cardList .cardbtn:nth-child(4), #list .item:nth-child(4) { animation-delay: .09s; }
+  #cardCats .catbtn:nth-child(5), #cardList .cardbtn:nth-child(5), #list .item:nth-child(5) { animation-delay: .12s; }
+  #cardCats .catbtn:nth-child(6), #cardList .cardbtn:nth-child(6), #list .item:nth-child(6) { animation-delay: .12s; }
+  #cardCats .catbtn:nth-child(7), #cardList .cardbtn:nth-child(7), #list .item:nth-child(7) { animation-delay: .15s; }
+  #cardCats .catbtn:nth-child(8), #cardList .cardbtn:nth-child(8), #list .item:nth-child(8) { animation-delay: .18s; }
+  @media (prefers-reduced-motion: reduce) {
+    .card, .daycard, .catbtn, .cardbtn, .item, .head, .total { animation: none; }
+  }
+
+  /* ── иконки и мягкие акценты разделов карт ── */
+  .catbtn[data-cat] { border-left: 3px solid var(--line); }
+  .catbtn::before { margin-right: 9px; }
+  .catbtn[data-cat="0"] { border-left-color: var(--c0); }
+  .catbtn[data-cat="1"] { border-left-color: var(--c1); }
+  .catbtn[data-cat="2"] { border-left-color: var(--c2); }
+  .catbtn[data-cat="3"] { border-left-color: var(--c3); }
+  .catbtn[data-cat="4"] { border-left-color: var(--c4); }
+  .catbtn[data-cat="5"] { border-left-color: var(--c5); }
+  .catbtn[data-cat="6"] { border-left-color: var(--c6); }
+  .catbtn[data-cat="7"] { border-left-color: var(--c7); }
+  .catbtn[data-cat="0"]::before { content: "🥩"; }
+  .catbtn[data-cat="1"]::before { content: "🥗"; }
+  .catbtn[data-cat="2"]::before { content: "🍚"; }
+  .catbtn[data-cat="3"]::before { content: "🍲"; }
+  .catbtn[data-cat="4"]::before { content: "🥣"; }
+  .catbtn[data-cat="5"]::before { content: "🥪"; }
+  .catbtn[data-cat="6"]::before { content: "☕"; }
+  .catbtn[data-cat="7"]::before { content: "🧊"; }
+
+  /* ── сегодняшний день читается сразу ── */
+  .daycard.today { border-left: 3px solid color-mix(in srgb, var(--accent) 85%, white); }
   @media (min-width: 620px) {
     body { max-width: 760px; margin: 0 auto; }
     .days { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -152,9 +218,9 @@
 <body>
 
 <div class="tabs">
-  <button class="tab active" id="tab-order">Заказ</button>
-  <button class="tab" id="tab-menu">Меню</button>
-  <button class="tab" id="tab-cards">Карты</button>
+  <button class="tab active" id="tab-order">🧾 Заказ</button>
+  <button class="tab" id="tab-menu">📅 Меню</button>
+  <button class="tab" id="tab-cards">📖 Карты</button>
 </div>
 
 <!-- ================= ЗАКАЗ ================= -->
