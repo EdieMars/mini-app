@@ -60,13 +60,17 @@
   .tip b { color: var(--accent); font-weight: 600; }
 
   /* меню */
-  table.menu { width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.35; }
-  table.menu th, table.menu td { border: 1px solid var(--line); padding: 5px 6px; vertical-align: top; text-align: left; }
-  table.menu thead th { color: var(--hint); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
-  table.menu tbody th { white-space: nowrap; font-weight: 600; font-size: 12px; }
-  table.menu tbody th span { display: block; color: var(--hint); font-weight: 400; font-size: 11px; }
-  table.menu tr.today th { color: var(--accent); }
-  table.menu td { color: var(--text); }
+  .days { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+  .daycard { background: var(--card); border-radius: 14px; padding: 10px 12px; }
+  .dayhead { font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+  .dayhead span { color: var(--hint); font-weight: 400; font-size: 12px; }
+  .daycard.today { border: 1px solid var(--accent); }
+  .daycard.today .dayhead { color: var(--accent); }
+  .mlabel { color: var(--hint); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; margin: 8px 0 3px; }
+  .dishrow { display: flex; font-size: 13px; line-height: 1.35; padding: 1px 0; }
+  .dishrow .num { color: var(--hint); width: 16px; flex: none; }
+  .dishrow .name { flex: 1; }
+  .dishrow .out { color: var(--accent); white-space: nowrap; padding-left: 6px; font-size: 12px; }
   .weeknav { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
   .weeknav input { flex: 1; text-align: center; }
   .weeknav button { width: 44px; height: 42px; font-size: 18px; border: none; border-radius: 10px; background: rgba(255,255,255,.08); color: var(--text); }
@@ -301,23 +305,27 @@
   function renderMenu() {
     var days = A.weekDays(menuBase);
     var today = new Date();
-    var html = '<div class="card" style="padding:0;overflow:hidden">' +
-               '<table class="menu"><thead><tr><th></th>' +
-               '<th>Завтрак</th><th>Обед</th><th>Ужин</th></tr></thead><tbody>';
+    var html = '<div class="days">';
     days.forEach(function (d) {
-      var meals = A.menuFor(d.day, D.menu);
       var isToday = d.date.getDate() === today.getDate() &&
                     d.date.getMonth() === today.getMonth() &&
                     d.date.getFullYear() === today.getFullYear();
-      html += '<tr' + (isToday ? ' class="today"' : '') + '>' +
-              '<th>' + d.name + ', ' + A.fmtDate(d.date).slice(0, 5) +
-              '<span>день ' + d.day + (isToday ? ' · сегодня' : '') + '</span></th>';
+      html += '<div class="daycard' + (isToday ? ' today' : '') + '">' +
+              '<div class="dayhead">' + d.name + ', ' + A.fmtDate(d.date).slice(0, 5) +
+              ' <span>· день ' + d.day + (isToday ? ' · сегодня' : '') + '</span></div>';
       ['Завтрак', 'Обед', 'Ужин'].forEach(function (m) {
-        html += '<td>' + (meals[m].length ? meals[m].join('<br>') : '—') + '</td>';
+        var rows = D.menu.filter(function (r) { return r.day_no === d.day && r.meal === m; });
+        if (!rows.length) return;
+        html += '<div class="mlabel">' + m + '</div>';
+        rows.forEach(function (r) {
+          html += '<div class="dishrow"><span class="num">' + r.num + '</span>' +
+                  '<span class="name">' + r.dish + '</span>' +
+                  '<span class="out">' + (r.out || '') + '</span></div>';
+        });
       });
-      html += '</tr>';
+      html += '</div>';
     });
-    html += '</tbody></table></div>';
+    html += '</div>';
     $('menuList').innerHTML = html;
     $('weekDate').value = A.fmtDate(days[0].date).slice(0, 5) + ' – ' + A.fmtDate(days[6].date).slice(0, 5);
   }
