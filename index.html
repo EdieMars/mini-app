@@ -60,13 +60,13 @@
   .tip b { color: var(--accent); font-weight: 600; }
 
   /* меню */
-  .dayhead { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
-  .dayhead span { color: var(--hint); font-weight: 400; font-size: 12px; }
-  .today .dayhead { color: var(--accent); }
-  .day { padding: 9px 0; border-bottom: 1px solid var(--line); }
-  .day:last-child { border-bottom: none; }
-  .meal { font-size: 13px; color: var(--hint); line-height: 1.35; margin-top: 2px; }
-  .meal b { color: var(--text); font-weight: 500; }
+  table.menu { width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.35; }
+  table.menu th, table.menu td { border: 1px solid var(--line); padding: 5px 6px; vertical-align: top; text-align: left; }
+  table.menu thead th { color: var(--hint); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+  table.menu tbody th { white-space: nowrap; font-weight: 600; font-size: 12px; }
+  table.menu tbody th span { display: block; color: var(--hint); font-weight: 400; font-size: 11px; }
+  table.menu tr.today th { color: var(--accent); }
+  table.menu td { color: var(--text); }
   .weeknav { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
   .weeknav input { flex: 1; text-align: center; }
   .weeknav button { width: 44px; height: 42px; font-size: 18px; border: none; border-radius: 10px; background: rgba(255,255,255,.08); color: var(--text); }
@@ -301,25 +301,23 @@
   function renderMenu() {
     var days = A.weekDays(menuBase);
     var today = new Date();
-    var html = '<div class="card">';
-    $('weeknote').innerHTML = 'День 1 цикла — 16.11.2026';
+    var html = '<div class="card" style="padding:0;overflow:hidden">' +
+               '<table class="menu"><thead><tr><th></th>' +
+               '<th>Завтрак</th><th>Обед</th><th>Ужин</th></tr></thead><tbody>';
     days.forEach(function (d) {
       var meals = A.menuFor(d.day, D.menu);
       var isToday = d.date.getDate() === today.getDate() &&
                     d.date.getMonth() === today.getMonth() &&
                     d.date.getFullYear() === today.getFullYear();
-      html += '<div class="day' + (isToday ? ' today' : '') + '">' +
-              '<div class="dayhead">' + d.name + ', ' + A.fmtDate(d.date).slice(0, 5) +
-              ' <span>· день ' + d.day + (isToday ? ' · сегодня' : '') + '</span></div>';
-      [['З', 'Завтрак'], ['О', 'Обед'], ['У', 'Ужин']].forEach(function (m) {
-        var list = meals[m[1]];
-        if (list.length) {
-          html += '<div class="meal"><b>' + m[0] + '</b> ' + list.join('; ') + '</div>';
-        }
+      html += '<tr' + (isToday ? ' class="today"' : '') + '>' +
+              '<th>' + d.name + ', ' + A.fmtDate(d.date).slice(0, 5) +
+              '<span>день ' + d.day + (isToday ? ' · сегодня' : '') + '</span></th>';
+      ['Завтрак', 'Обед', 'Ужин'].forEach(function (m) {
+        html += '<td>' + (meals[m].length ? meals[m].join('<br>') : '—') + '</td>';
       });
-      html += '</div>';
+      html += '</tr>';
     });
-    html += '</div>';
+    html += '</tbody></table></div>';
     $('menuList').innerHTML = html;
     $('weekDate').value = A.fmtDate(days[0].date).slice(0, 5) + ' – ' + A.fmtDate(days[6].date).slice(0, 5);
   }
