@@ -81,6 +81,7 @@
     font-size: 15px; color: var(--text); background: rgba(255, 255, 255, .06);
     border: none; border-radius: 10px; font-weight: 400;
   }
+  .catbtn.back { color: var(--accent); background: rgba(255, 255, 255, .04); font-weight: 600; }
   .cardbtn {
     display: block; width: 100%; text-align: left; padding: 10px 12px; margin-bottom: 6px;
     font-size: 14px; color: var(--text); background: rgba(255, 255, 255, .05);
@@ -166,6 +167,12 @@
   </div>
 
   <div id="cardCats"></div>
+
+  <div id="cardNav" class="hidden">
+    <button class="catbtn back" id="cardBack">← Разделы</button>
+    <div class="tip" id="cardTitle" style="margin:0 0 8px"></div>
+  </div>
+
   <div id="cardList"></div>
 
   <div id="cardView" class="hidden">
@@ -345,7 +352,16 @@
   // ================= КАРТЫ =================
   var curCard = null;
 
+  function showCats() {
+    $('cardCats').classList.remove('hidden');
+    $('cardNav').classList.add('hidden');
+    $('cardList').innerHTML = '';
+    $('cardView').classList.add('hidden');
+    $('cardNote').textContent = '';
+  }
+
   function renderCardCats() {
+    showCats();
     var html = '';
     D.card_categories.forEach(function (cat, i) {
       html += '<button class="catbtn" data-cat="' + i + '">' + cat[0] + '</button>';
@@ -356,13 +372,16 @@
         var idx = parseInt(btn.getAttribute('data-cat'), 10);
         var pages = D.card_categories[idx][1];
         var list = D.cards.filter(function (c) { return pages.indexOf(c.page) >= 0; });
-        $('cardNote').textContent = D.card_categories[idx][0];
-        renderCardList(list);
+        showList(D.card_categories[idx][0], list);
       });
     });
   }
 
-  function renderCardList(list) {
+  function showList(title, list) {
+    $('cardCats').classList.add('hidden');
+    $('cardNav').classList.remove('hidden');
+    $('cardView').classList.add('hidden');
+    $('cardTitle').textContent = title + (list.length ? ' — ' + list.length : '');
     var html = '';
     list.forEach(function (c) {
       html += '<button class="cardbtn" data-page="' + c.page + '">' + c.dish +
@@ -379,12 +398,23 @@
 
   function openCard(card) {
     curCard = card;
+    $('cardList').classList.add('hidden');
     $('cardView').classList.remove('hidden');
     $('cardName').innerHTML = card.dish + (card.output ? ' <span class="coutput">' + card.output + '</span>' : '');
     $('cardOut').innerHTML = '';
     $('portions').value = '';
     $('portions').focus();
   }
+
+  $('cardBack').addEventListener('click', function () {
+    if (curCard) {
+      curCard = null;
+      $('cardView').classList.add('hidden');
+      $('cardList').classList.remove('hidden');
+    } else {
+      showCats();
+    }
+  });
 
   function renderCardOut() {
     if (!curCard) return;
@@ -402,8 +432,8 @@
     var q = val('cardQuery');
     if (!q) { $('cardNote').textContent = 'Напиши название блюда'; return; }
     var list = A.findCards(q, D.cards);
-    $('cardNote').textContent = list.length ? 'Найдено: ' + list.length : 'Не нашёл такое блюдо';
-    renderCardList(list);
+    $('cardNote').textContent = '';
+    showList('Поиск: ' + q, list);
   });
   $('cardQuery').addEventListener('keydown', function (ev) {
     if (ev.key === 'Enter') $('cardSearch').click();
