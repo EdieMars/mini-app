@@ -153,11 +153,16 @@
   .dishrow .name { flex: 1; }
   .dishrow .out { color: var(--accent); white-space: nowrap; padding-left: 8px; font-size: 12px; font-weight: 650; }
   .weeknav { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-  .weeknav input { flex: 1; text-align: center; font-weight: 650; }
+  .weeknav input { flex: 1; min-width: 0; text-align: center; font-weight: 650; }
   .weeknav button {
     flex: none; width: 48px; height: 48px; font-size: 17px; font-weight: 700;
     border: 1px solid var(--line); border-radius: 14px;
     background: var(--card); color: var(--text);
+  }
+  .weeknav .todaybtn {
+    width: auto; padding: 0 16px; font-size: 14px; font-weight: 700;
+    background: var(--accent); color: var(--accent-text); border-color: transparent;
+    box-shadow: 0 4px 12px rgba(0,0,0,.2);
   }
 
   /* карты */
@@ -291,8 +296,8 @@
     <button id="prevWeek" aria-label="Предыдущая неделя">◀</button>
     <input id="weekDate" inputmode="numeric" placeholder="13.11" autocomplete="off">
     <button id="nextWeek" aria-label="Следующая неделя">▶</button>
+    <button id="thisWeek" class="todaybtn">Сегодня</button>
   </div>
-  <button class="catbtn back" id="thisWeek" style="margin:0 0 8px">Сегодня</button>
   <div class="tip" id="weeknote" style="margin:-4px 0 12px"></div>
   <div id="menuList"></div>
 </div>
