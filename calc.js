@@ -45,8 +45,8 @@
     return out;
   }
 
-  // Сумма продуктов: {продукт: целое количество}
-  function calc(rows, recipes, days, people, reserve) {
+  // Сумма продуктов БЕЗ округления — для вычета остатков
+  function calcRaw(rows, recipes, days, people, reserve) {
     var daySet = {};
     for (var i = 0; i < days.length; i++) daySet[days[i]] = 1;
     var perDay = false;
@@ -68,9 +68,17 @@
         total[it.product] = (total[it.product] || 0) + it.qty * n;
       }
     }
+    var clean = {};
+    for (var p in total) { if (total[p] > 0) clean[p] = total[p]; }
+    return clean;
+  }
+
+  // Сумма продуктов: {продукт: целое количество} — округление вверх в самом конце
+  function calc(rows, recipes, days, people, reserve) {
+    var raw = calcRaw(rows, recipes, days, people, reserve);
     var out = {};
-    for (var p in total) {
-      var q = Math.ceil(total[p] - 1e-9);
+    for (var p in raw) {
+      var q = Math.ceil(raw[p] - 1e-9);
       if (q > 0) out[p] = q;
     }
     return out;
@@ -111,6 +119,7 @@
     norm: norm,
     parseDays: parseDays,
     calc: calc,
+    calcRaw: calcRaw,
     daysLabel: daysLabel,
     groupOrder: groupOrder,
     CYCLE_START: new Date(2026, 10, 16),   // 16.11.2026 = день 1

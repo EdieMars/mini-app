@@ -8,9 +8,23 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const PYTHON = 'C:\\Users\\pchel\\.dsh\\dsh-runtimes\\dsh-primary-runtime\\dependencies\\python\\python.exe';
-const BOT_DIR = 'C:\\Users\\pchel\\OneDrive\\Документы\\deepseek-harness\\default-workspace\\бот-заказа';
 const APP_DIR = path.resolve(__dirname, '..');
+
+// эталон живёт в папке бота — ищем её в привычных местах
+const BOT_DIR = [process.env.KITCHEN_BOT,
+  path.resolve(APP_DIR, '..', 'бот'),
+  'C:\\Users\\pchel\\Desktop\\Кухня\\бот',
+  '/opt/zakaz-bot'].filter(Boolean)
+  .find(p => fs.existsSync(path.join(p, 'order_core.py')));
+if (!BOT_DIR) {
+  console.log('папка бота не найдена — тест пропущен (укажи KITCHEN_BOT)');
+  process.exit(0);
+}
+
+const PYTHON = [process.env.PYTHON_BIN,
+  'C:\\Users\\pchel\\.dsh\\dsh-runtimes\\dsh-primary-runtime\\dependencies\\python\\python.exe',
+  'python', 'python3'].filter(Boolean)
+  .find(p => !/[\\/]/.test(p) || fs.existsSync(p));
 
 // ---------- calc.js + data.js в песочнице ----------
 global.window = {};
