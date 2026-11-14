@@ -136,15 +136,28 @@
     return n + 1;
   }
 
-  // '16.11' / '16.11.2026' / '16' -> Date (год по умолчанию 2026)
+  // приводит дату к виду '16.11' или '16.11.2026'
+  // понимает: 16.11 / 16.11.26 / 16.11.2026 / 16 11 / 16/11 / 16-11 / 1611 / 16112026
+  function normDate(s) {
+    var t = String(s).trim()
+      .replace(/[\/\\\-,\s]+/g, '.')
+      .replace(/\.{2,}/g, '.')
+      .replace(/^\.+|\.+$/g, '');
+    if (/^\d{4}$/.test(t)) t = t.slice(0, 2) + '.' + t.slice(2);            // 1611
+    else if (/^\d{5,8}$/.test(t)) t = t.slice(0, 2) + '.' + t.slice(2, 4) + '.' + t.slice(4); // 161126 / 16112026
+    return t;
+  }
+
+  // '16.11' / '16.11.2026' / '1611' -> Date (год по умолчанию 2026)
   function parseDate(s) {
-    var m = String(s).trim().match(/^(\d{1,2})(?:\.(\d{1,2}))?(?:\.(\d{2,4}))?$/);
-    if (!m) throw new Error('«' + s + '» — не дата. Пиши так: 16.11');
+    var t = normDate(s);
+    var m = t.match(/^(\d{1,2})(?:\.(\d{1,2}))?(?:\.(\d{2,4}))?$/);
+    if (!m) throw new Error('«' + s + '» — не дата. Пиши так: 16.11 или 1611');
     var d = parseInt(m[1], 10);
     var mo = m[2] ? parseInt(m[2], 10) : null;
     var y = m[3] ? parseInt(m[3], 10) : 2026;
     if (y < 100) y += 2000;
-    if (!mo) throw new Error('Укажи месяц: 16.11');
+    if (!mo) throw new Error('Укажи месяц: 16.11 или 1611');
     var dt = new Date(y, mo - 1, d);
     if (dt.getDate() !== d || dt.getMonth() !== mo - 1) throw new Error('Такой даты нет: ' + s);
     return dt;

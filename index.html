@@ -274,10 +274,10 @@
     <div id="mode-dates">
       <label>С какого и по какое число</label>
       <div class="row">
-        <div><input id="from" inputmode="numeric" placeholder="16.11" autocomplete="off"></div>
-        <div><input id="to" inputmode="numeric" placeholder="18.11" autocomplete="off"></div>
+        <div><input id="from" inputmode="decimal" placeholder="1611" autocomplete="off"></div>
+        <div><input id="to" inputmode="decimal" placeholder="1811" autocomplete="off"></div>
       </div>
-      <div class="tip" id="datenote">День 1 цикла — 16.11.2026</div>
+      <div class="tip" id="datenote">Пиши как удобно: 16.11 или 1611</div>
     </div>
     <div id="mode-days" class="hidden">
       <label>Дни (например 15-17, 1,3,5 или 28-3)</label>
@@ -445,7 +445,7 @@
       $('datenote').innerHTML = A.fmtDate(f) + ' — день ' + A.dateToDay(f) +
         (days.length > 1 ? ', дни цикла: <b>' + A.daysLabel(days) + '</b>' : '');
     } catch (e) {
-      $('datenote').textContent = 'День 1 цикла — 16.11.2026';
+      $('datenote').textContent = 'Пиши как удобно: 16.11 или 1611';
     }
   }
 
