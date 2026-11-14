@@ -1,840 +1,129 @@
-<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#111820">
-<title>Кухня</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<style>
-  :root {
-    color-scheme: dark;
-    --bg: var(--tg-theme-bg-color, #111820);
-    --card: var(--tg-theme-secondary-bg-color, #1b2631);
-    --text: var(--tg-theme-text-color, #f3f6f8);
-    --hint: var(--tg-theme-hint-color, #91a0ae);
-    --accent: var(--tg-theme-button-color, #63b891);
-    --accent-text: var(--tg-theme-button-text-color, #081810);
-    --line: rgba(255,255,255,.09);
-    --soft: rgba(255,255,255,.045);
-    --shadow: 0 8px 24px rgba(0,0,0,.18);
-    /* мягкие акценты разделов карт */
-    --c0: #dd8a72; /* вторые блюда */
-    --c1: #8cbd85; /* салаты и закуски */
-    --c2: #cdb06a; /* гарниры */
-    --c3: #d96a5c; /* супы */
-    --c4: #a8c4da; /* каши и завтраки */
-    --c5: #cf9a5e; /* бутерброды и выпечка */
-    --c6: #b69ad0; /* напитки и добавки */
-    --c7: #7db6c6; /* полуфабрикаты */
-  }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  /* бледный кухонный узор: ложка, вилка, чашка, нож */
-  :root {
-    --pattern: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'><g fill='none' stroke='%23ffffff' stroke-opacity='0.045' stroke-width='1.6' stroke-linecap='round'><path d='M40 26v30a10 10 0 0 0 20 0V26'/><path d='M50 26v66'/><circle cx='150' cy='40' r='12'/><path d='M150 52v40'/><path d='M96 30h26v14a13 13 0 0 1-13 13h0a13 13 0 0 1-13-13z'/><path d='M109 57v35'/><path d='M186 120l-16 16 8 8 16-16z'/><path d='M162 144l-8 8 10 10 8-8'/><path d='M36 150c0-12 10-22 22-22s22 10 22 22-10 22-22 22-22-10-22-22z'/><path d='M58 172v26'/><path d='M120 130v46'/><path d='M120 130c0-8 6-14 14-14s14 6 14 14-6 14-14 14-14-6-14-14z'/></g></svg>");
-    --pattern-light: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'><g fill='none' stroke='%23000000' stroke-opacity='0.05' stroke-width='1.6' stroke-linecap='round'><path d='M40 26v30a10 10 0 0 0 20 0V26'/><path d='M50 26v66'/><circle cx='150' cy='40' r='12'/><path d='M150 52v40'/><path d='M96 30h26v14a13 13 0 0 1-13 13h0a13 13 0 0 1-13-13z'/><path d='M109 57v35'/><path d='M186 120l-16 16 8 8 16-16z'/><path d='M162 144l-8 8 10 10 8-8'/><path d='M36 150c0-12 10-22 22-22s22 10 22 22-10 22-22 22-22-10-22-22z'/><path d='M58 172v26'/><path d='M120 130v46'/><path d='M120 130c0-8 6-14 14-14s14 6 14 14-6 14-14 14-14-6-14-14z'/></g></svg>");
-  }
-  body {
-    margin: 0;
-    padding: max(10px, env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));
-    background: var(--bg);
-    background: var(--pattern) repeat, var(--bg);
-    color: var(--text);
-    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    letter-spacing: .01em;
-    -webkit-font-smoothing: antialiased;
-  }
-  /* тёмная тема — мягкий градиент поверх узора */
-  body:not(.light) {
-    background:
-      var(--pattern) repeat,
-      radial-gradient(130% 60% at 50% -20%, rgba(140,170,205,.07), transparent 55%),
-      radial-gradient(120% 70% at 100% 110%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 60%),
-      linear-gradient(180deg,
-        color-mix(in srgb, var(--bg) 96%, white) 0%,
-        var(--bg) 45%,
-        color-mix(in srgb, var(--bg) 93%, black) 100%);
-    background-attachment: fixed, fixed, fixed, fixed;
-  }
-  /* светлая тема — только узор, без тёмных градиентов */
-  body.light {
-    background: var(--pattern-light) repeat, var(--bg);
-    background-attachment: fixed, fixed;
-  }
-  button, input { font: inherit; }
-  button { cursor: pointer; touch-action: manipulation; }
-  .tabs {
-    display: flex; gap: 6px; margin: 0 -4px 16px; padding: 7px 4px;
-    position: sticky; top: 0; z-index: 5;
-    background: var(--bg); background: color-mix(in srgb, var(--bg) 92%, transparent);
-    backdrop-filter: blur(14px);
-  }
-  .tab {
-    flex: 1; min-height: 44px; padding: 10px 6px;
-    font-size: 14px; font-weight: 650; color: var(--hint);
-    background: var(--soft); border: 1px solid transparent; border-radius: 13px;
-    transition: background .16s ease, color .16s ease, transform .12s ease;
-  }
-  .tab:active, button:active { transform: scale(.965); }
-  button.go, .catbtn, .cardbtn, .weeknav button {
-    transition: transform .12s ease, opacity .12s ease, background .16s ease, border-color .16s ease;
-  }
-  .tab.active {
-    color: var(--accent-text); background: var(--accent);
-    box-shadow: 0 4px 12px rgba(0,0,0,.18);
-  }
-  .card {
-    background: var(--card); border: 1px solid var(--line); border-radius: 18px;
-    padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow);
-  }
-  label {
-    display: block; font-size: 13px; font-weight: 600; color: var(--hint);
-    margin-bottom: 8px;
-  }
-  input {
-    width: 100%; min-height: 48px; padding: 12px 14px;
-    font-size: 16px; color: var(--text); background: rgba(0,0,0,.16);
-    border: 1px solid var(--line); border-radius: 13px; outline: none;
-    transition: border-color .15s, box-shadow .15s;
-  }
-  input::placeholder { color: var(--hint); opacity: .72; }
-  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
-  .row { display: flex; gap: 9px; }
-  .row > div { flex: 1; min-width: 0; }
-  .subtabs { display: flex; gap: 7px; margin: 0 0 12px; }
-  .subtabs .tab { min-height: 42px; font-size: 13px; padding: 9px 6px; }
-  button.go {
-    width: 100%; min-height: 52px; padding: 13px 16px; margin-top: 5px;
-    font-size: 16px; font-weight: 700; color: var(--accent-text);
-    background: var(--accent); border: none; border-radius: 15px;
-    box-shadow: 0 5px 14px rgba(0,0,0,.17);
-  }
-  button.go:active { opacity: .88; }
-  button.ghost { background: rgba(255,255,255,.08); color: var(--text); box-shadow: none; }
-  .mini { font-size: 13px; }
-  .err { color: #ff938b; font-size: 14px; margin: 8px 2px; min-height: 18px; }
-  .head { font-size: 15px; margin: 18px 0 10px; color: var(--hint); line-height: 1.65; }
-  .head b { color: var(--text); font-weight: 700; }
-  .cat {
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .09em; color: var(--accent); margin: 18px 0 5px;
-  }
-  .item {
-    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
-    padding: 11px 2px; border-bottom: 1px solid var(--line);
-  }
-  .item:last-child { border-bottom: none; }
-  .qty { color: var(--accent); font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .total { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--hint); }
-  .hidden { display: none; }
-  .tip { font-size: 12px; line-height: 1.5; color: var(--hint); margin-top: 8px; }
-  .tip b { color: var(--accent); font-weight: 700; }
-
-  /* меню */
-  .days { display: grid; grid-template-columns: minmax(0, 1fr); gap: 11px; }
-  .daycard {
-    background: var(--card); border: 1px solid var(--line); border-radius: 17px;
-    padding: 14px 15px; box-shadow: 0 5px 18px rgba(0,0,0,.13);
-  }
-  .dayhead { font-weight: 700; font-size: 15px; margin-bottom: 8px; }
-  .dayhead span { color: var(--hint); font-weight: 500; font-size: 12px; }
-  .daycard.today {
-    border: 1px solid color-mix(in srgb, var(--accent) 72%, white);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent), 0 8px 24px rgba(0,0,0,.2);
-    background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 10%, var(--card)), var(--card) 58%);
-  }
-  .daycard.today .dayhead { color: var(--accent); }
-  .mlabel {
-    color: var(--hint); font-size: 12px; font-weight: 750; text-transform: uppercase;
-    letter-spacing: .08em; margin: 12px 0 4px;
-  }
-  .dishrow { display: flex; align-items: baseline; font-size: 13px; line-height: 1.45; padding: 3px 0; }
-  .dishrow .num { color: var(--hint); width: 20px; flex: none; font-variant-numeric: tabular-nums; }
-  .dishrow .name { flex: 1; }
-  .dishrow .out { color: var(--accent); white-space: nowrap; padding-left: 8px; font-size: 12px; font-weight: 650; }
-  .weeknav { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-  .weeknav input { flex: 1; min-width: 0; text-align: center; font-weight: 650; }
-  .weeknav button {
-    flex: none; width: 48px; height: 48px; font-size: 17px; font-weight: 700;
-    border: 1px solid var(--line); border-radius: 14px;
-    background: var(--card); color: var(--text);
-  }
-  .weeknav .todaybtn {
-    width: auto; padding: 0 16px; font-size: 14px; font-weight: 700;
-    background: var(--accent); color: var(--accent-text); border-color: transparent;
-    box-shadow: 0 4px 12px rgba(0,0,0,.2);
-  }
-  /* меню по одному дню: свайп влево-вправо */
-  .dayview { overflow: hidden; padding: 2px 0 14px; touch-action: pan-y; }
-  .daytrack {
-    display: flex; align-items: stretch;
-    transition: transform .26s cubic-bezier(.22,.72,.28,1);
-    will-change: transform;
-  }
-  /* на время перетаскивания плавность выключается, иначе палец «плывёт» */
-  .daytrack .daycard {
-    flex: 0 0 100%; min-width: 0; box-shadow: 0 3px 12px rgba(0,0,0,.12);
-    /* чтобы iOS при свайпе по тексту не начинал выделение вместо прокрутки */
-    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
-  }
-  .daydots { display: flex; justify-content: center; align-items: center; gap: 9px; margin: 2px 0 4px; min-height: 14px; }
-  .daydot {
-    width: 8px; height: 8px; padding: 0; border: none; border-radius: 50%;
-    background: var(--line); transition: background .18s ease, transform .18s ease;
-  }
-  .daydot.on { background: var(--accent); transform: scale(1.45); }
-
-  /* карты */
-  .catbtn {
-    display: block; width: 100%; min-height: 50px; text-align: left;
-    padding: 13px 15px; margin-bottom: 8px; font-size: 15px;
-    color: var(--text); background: var(--card); border: 1px solid var(--line);
-    border-radius: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,.12);
-  }
-  .catbtn.back {
-    color: var(--accent); background: transparent; border-color: transparent;
-    box-shadow: none; font-weight: 700; padding-left: 4px;
-  }
-  .cardbtn {
-    display: block; width: 100%; min-height: 48px; text-align: left;
-    padding: 12px 14px; margin-bottom: 7px; font-size: 14px;
-    color: var(--text); background: var(--card); border: 1px solid var(--line);
-    border-radius: 13px;
-  }
-  .coutput { color: var(--hint); font-size: 12px; font-weight: 500; }
-
-  /* ── плавное появление карточек и списков ── */
-  @keyframes rise {
-    from { opacity: 0; transform: translateY(9px); }
-    to   { opacity: 1; transform: none; }
-  }
-  .card, .daycard, .catbtn, .cardbtn, .item, .head, .total { animation: rise .2s ease both; }
-  .days .daycard:nth-child(2) { animation-delay: .04s; }
-  .days .daycard:nth-child(3) { animation-delay: .07s; }
-  .days .daycard:nth-child(4) { animation-delay: .10s; }
-  .days .daycard:nth-child(5) { animation-delay: .13s; }
-  .days .daycard:nth-child(6) { animation-delay: .16s; }
-  .days .daycard:nth-child(7) { animation-delay: .19s; }
-  #cardCats .catbtn:nth-child(2), #cardList .cardbtn:nth-child(2), #list .item:nth-child(2) { animation-delay: .03s; }
-  #cardCats .catbtn:nth-child(3), #cardList .cardbtn:nth-child(3), #list .item:nth-child(3) { animation-delay: .06s; }
-  #cardCats .catbtn:nth-child(4), #cardList .cardbtn:nth-child(4), #list .item:nth-child(4) { animation-delay: .09s; }
-  #cardCats .catbtn:nth-child(5), #cardList .cardbtn:nth-child(5), #list .item:nth-child(5) { animation-delay: .12s; }
-  #cardCats .catbtn:nth-child(6), #cardList .cardbtn:nth-child(6), #list .item:nth-child(6) { animation-delay: .12s; }
-  #cardCats .catbtn:nth-child(7), #cardList .cardbtn:nth-child(7), #list .item:nth-child(7) { animation-delay: .15s; }
-  #cardCats .catbtn:nth-child(8), #cardList .cardbtn:nth-child(8), #list .item:nth-child(8) { animation-delay: .18s; }
-  @media (prefers-reduced-motion: reduce) {
-    .card, .daycard, .catbtn, .cardbtn, .item, .head, .total { animation: none; }
-  }
-
-  /* ── иконки и мягкие акценты разделов карт ── */
-  .catbtn[data-cat] { border-left: 3px solid var(--line); }
-  .catbtn::before { margin-right: 9px; }
-  .catbtn[data-cat="0"] { border-left-color: var(--c0); }
-  .catbtn[data-cat="1"] { border-left-color: var(--c1); }
-  .catbtn[data-cat="2"] { border-left-color: var(--c2); }
-  .catbtn[data-cat="3"] { border-left-color: var(--c3); }
-  .catbtn[data-cat="4"] { border-left-color: var(--c4); }
-  .catbtn[data-cat="5"] { border-left-color: var(--c5); }
-  .catbtn[data-cat="6"] { border-left-color: var(--c6); }
-  .catbtn[data-cat="7"] { border-left-color: var(--c7); }
-  .catbtn[data-cat="0"]::before { content: "🥩"; }
-  .catbtn[data-cat="1"]::before { content: "🥗"; }
-  .catbtn[data-cat="2"]::before { content: "🍚"; }
-  .catbtn[data-cat="3"]::before { content: "🍲"; }
-  .catbtn[data-cat="4"]::before { content: "🥣"; }
-  .catbtn[data-cat="5"]::before { content: "🥪"; }
-  .catbtn[data-cat="6"]::before { content: "☕"; }
-  .catbtn[data-cat="7"]::before { content: "🧊"; }
-
-  /* ── сегодняшний день читается сразу ── */
-  .daycard.today { border-left: 3px solid color-mix(in srgb, var(--accent) 85%, white); }
-  /* ── печать заказа: белый лист A4, только заголовок и список ── */
-  @media print {
-    @page { size: A4; margin: 14mm; }
-    body {
-      background: #fff !important; color: #000; font-size: 12pt;
-      padding: 0; max-width: none; letter-spacing: normal;
-    }
-    .tabs, .subtabs, .weeknav, button, input, label, .tip, .err { display: none !important; }
-    .card, .daycard, .daycard.today {
-      background: none; border: none; box-shadow: none;
-      padding: 0; margin: 0 0 10px; animation: none;
-    }
-    .card, .daycard, .catbtn, .cardbtn, .item, .head, .total { animation: none; }
-    .cat { color: #000; margin: 14px 0 4px; }
-    .item { border-bottom: 1px solid #bbb; padding: 5px 0; }
-    .qty, .head, .head b, .total, .mlabel, .dayhead, .dayhead span,
-    .dishrow .num, .dishrow .out, .coutput { color: #000; }
-    .dayhead { font-size: 12pt; margin-bottom: 4px; }
-    /* на печати — только видимая неделя, без слайдера */
-    .dayview { overflow: visible; padding: 0; }
-    .daytrack { display: block; transform: none !important; transition: none; }
-    .daytrack .daycard { display: block; flex: none; box-shadow: none; }
-    .daytrack .daycard[data-week="-1"], .daytrack .daycard[data-week="1"] { display: none !important; }
-    .daydots { display: none; }
-  }
-
-  @media (min-width: 620px) {
-    body { max-width: 760px; margin: 0 auto; }
-    .days { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f6f2">
+  <title>Кухня · рабочий экран</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root { color-scheme: light; --bg:#f4f6f2; --paper:#fff; --ink:#202925; --muted:#758078; --line:#dfe5df; --green:#2d7656; --green-soft:#e5f1e9; --blue:#39738a; --orange:#b45e36; --shadow:0 5px 20px #26392c0c; }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; padding:env(safe-area-inset-top) 0 calc(84px + env(safe-area-inset-bottom)); }
+    button,input { font:inherit; } button { cursor:pointer; touch-action:manipulation; }
+    .shell { width:min(100%,720px); margin:auto; padding:0 16px; }
+    header { padding:18px 0 12px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .brand { font-size:19px; font-weight:750; letter-spacing:0; } .brand small { display:block; font-size:12px; color:var(--muted); font-weight:500; margin-top:2px; }
+    .date-chip { color:var(--green); font-size:12px; font-weight:700; background:var(--green-soft); padding:7px 10px; border-radius:6px; white-space:nowrap; }
+    main { padding-bottom:18px; }
+    h1 { font-size:21px; line-height:1.2; margin:10px 0 5px; letter-spacing:0; } .lead { color:var(--muted); font-size:13px; margin:0 0 18px; }
+    .section { margin:0 0 18px; } .section-title { font-size:13px; font-weight:750; margin:0 0 9px; }
+    .switch { display:flex; background:#e8ece7; padding:3px; border-radius:7px; gap:3px; margin:0 0 14px; }
+    .switch button { flex:1; min-height:38px; color:var(--muted); border:0; background:transparent; border-radius:5px; font-size:13px; font-weight:650; }
+    .switch button.active { color:var(--ink); background:var(--paper); box-shadow:0 1px 4px #1f332313; }
+    .row { display:flex; gap:10px; } .field { flex:1; min-width:0; }
+    label { display:block; font-size:12px; color:var(--muted); margin:0 0 6px; font-weight:600; }
+    input { display:block; width:100%; height:48px; border:1px solid var(--line); border-radius:6px; background:var(--paper); color:var(--ink); padding:0 12px; outline:0; }
+    input:focus { border-color:var(--green); box-shadow:0 0 0 3px #2d76561c; }
+    .person-field input { text-align:center; font-size:18px; font-weight:700; font-variant-numeric:tabular-nums; }
+    .hint { min-height:18px; color:var(--muted); font-size:12px; margin:7px 0 0; }
+    .divider { height:1px; background:var(--line); margin:17px 0; }
+    .reserve-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .reserve-row input { width:88px; text-align:center; }
+    .primary { width:100%; height:50px; border:0; border-radius:6px; background:var(--green); color:#fff; font-weight:750; box-shadow:var(--shadow); }
+    .primary:active,.action:active,.nav button:active { transform:translateY(1px); }
+    .action { min-height:42px; padding:0 13px; background:var(--paper); border:1px solid var(--line); border-radius:6px; color:var(--ink); font-weight:650; }
+    .actions { display:flex; gap:8px; margin-top:10px; } .actions .action { flex:1; }
+    .error { color:#a33d31; background:#fff0ed; padding:10px 12px; border-radius:5px; margin-top:10px; font-size:13px; }
+    .result-head { margin:19px 0 10px; padding:12px 13px; background:var(--green-soft); border-left:3px solid var(--green); border-radius:3px; font-size:13px; }
+    .result-head strong { display:block; font-size:15px; margin-bottom:3px; }
+    .group { margin:17px 0 0; } .group h3 { font-size:11px; letter-spacing:0; margin:0; padding:0 0 6px; color:var(--muted); border-bottom:1px solid var(--line); }
+    .item { display:flex; justify-content:space-between; gap:12px; padding:9px 2px; border-bottom:1px solid #e8ece8; font-size:14px; }
+    .qty { white-space:nowrap; color:var(--green); font-weight:750; font-variant-numeric:tabular-nums; }
+    .total { color:var(--muted); font-size:12px; padding-top:11px; }
+    .bottom-nav { position:fixed; z-index:5; bottom:0; left:0; right:0; padding:8px 12px calc(8px + env(safe-area-inset-bottom)); background:#fffffff2; border-top:1px solid var(--line); backdrop-filter:blur(14px); }
+    .nav { width:min(100%,680px); margin:auto; display:flex; gap:4px; }
+    .nav button { flex:1; height:48px; border:0; border-radius:5px; color:var(--muted); background:transparent; font-size:12px; font-weight:650; }
+    .nav button span { display:block; font-size:17px; line-height:20px; margin-bottom:1px; }
+    .nav button.active { color:var(--green); background:var(--green-soft); }
+    .hidden { display:none!important; }
+    .toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:10px 0; }
+    .toolbar input { flex:1; text-align:center; font-weight:700; }
+    .iconbtn { width:44px; height:44px; border:1px solid var(--line); background:var(--paper); border-radius:6px; font-size:18px; color:var(--ink); }
+    .today { width:auto; color:var(--green); border-color:#bdd5c5; background:var(--green-soft); font-size:12px; font-weight:700; padding:0 10px; white-space:nowrap; }
+    .day-panel { background:var(--paper); border-top:2px solid var(--green); padding:14px; box-shadow:var(--shadow); }
+    .day-title { font-weight:750; margin-bottom:12px; } .day-title small { color:var(--muted); font-weight:500; }
+    .meal { margin-top:13px; } .meal h3 { color:var(--blue); font-size:12px; margin:0 0 5px; } .dish { padding:5px 0; font-size:14px; border-bottom:1px solid #edf0ed; }
+    .day-pager { display:flex; align-items:center; justify-content:center; gap:10px; padding:10px; color:var(--muted); font-size:12px; }
+    .dots { display:flex; gap:7px; } .dot { width:7px; height:7px; border:0; border-radius:50%; padding:0; background:#cbd2cc; } .dot.active { background:var(--green); transform:scale(1.25); }
+    .searchbar { display:flex; gap:8px; margin:12px 0; } .searchbar input { flex:1; }
+    .category { width:100%; min-height:48px; text-align:left; padding:10px 12px; margin:0 0 7px; background:var(--paper); border:1px solid var(--line); border-left:3px solid var(--cat,var(--green)); border-radius:4px; color:var(--ink); font-weight:650; }
+    .recipe { background:var(--paper); border-top:2px solid var(--green); padding:14px; margin-top:12px; }
+    .recipe .item { font-size:14px; }
+    @media (min-width:620px) { body { padding-bottom:24px; } .bottom-nav { position:sticky; bottom:0; } .nav { max-width:500px; } .order-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 24px; } }
+    @media print { body { background:#fff; color:#000; padding:0; } header,.bottom-nav,.no-print,#screen-menu,#screen-cards { display:none!important; } #screen-order { display:block!important; } .result-head { border:0; background:none; padding:0; } .item,.group h3 { border-color:#bbb; } }
+    @media (prefers-reduced-motion:no-preference) { button { transition:transform .12s ease,background-color .15s ease; } }
+  </style>
 </head>
 <body>
-
-<div class="tabs">
-  <button class="tab active" id="tab-order">🧾 Заказ</button>
-  <button class="tab" id="tab-menu">📅 Меню</button>
-  <button class="tab" id="tab-cards">📖 Карты</button>
-</div>
-
-<!-- ================= ЗАКАЗ ================= -->
-<div id="screen-order">
-  <div class="subtabs">
-    <button class="tab active" id="sub-dates">Даты</button>
-    <button class="tab" id="sub-days">Дни цикла</button>
+  <div class="shell">
+    <header><div class="brand">Кухня<small>Расчёт заказа и техкарты</small></div><div class="date-chip" id="cycleChip">ЦИКЛ ·</div></header>
+    <main>
+      <section id="screen-order">
+        <h1>Заказ продуктов</h1><p class="lead">Выбери период и укажи число человек на каждый приём пищи.</p>
+        <div class="switch no-print"><button id="modeDate" class="active">По датам</button><button id="modeCycle">Дни цикла</button></div>
+        <div class="order-grid">
+          <div class="section" id="dateFields"><div class="section-title">Период</div><div class="row"><div class="field"><label for="from">С какого числа</label><input id="from" inputmode="numeric"></div><div class="field"><label for="to">По какое число</label><input id="to" inputmode="numeric"></div></div><p id="dateHint" class="hint">Вводи, например, 16.11 или 1611</p></div>
+          <div class="section hidden" id="cycleFields"><div class="section-title">Дни меню</div><div class="field"><label for="days">Дни: диапазон или через запятую, например 1-3</label><input id="days" inputmode="numeric"></div><p class="hint">В цикле 28 дней</p></div>
+          <div class="section"><div class="section-title">Человек по приёмам пищи</div><div class="row"><div class="field person-field"><label for="b">Завтрак</label><input id="b" inputmode="numeric"></div><div class="field person-field"><label for="l">Обед</label><input id="l" inputmode="numeric"></div><div class="field person-field"><label for="d">Ужин</label><input id="d" inputmode="numeric"></div></div></div>
+          <div class="section"><div class="reserve-row"><div><div class="section-title" style="margin:0">Запас</div><div class="hint" style="margin:2px 0 0">Добавляется к каждому числу</div></div><input id="reserve" inputmode="numeric" aria-label="Запас"></div></div>
+        </div>
+        <button class="primary" id="calculate">Рассчитать заказ</button>
+        <div class="actions no-print"><button class="action" id="reset">Очистить поля</button></div>
+        <div id="error" class="error hidden" role="alert"></div>
+        <div id="output" class="hidden"><div class="result-head" id="resultHead"></div><div id="resultList"></div><div class="total" id="resultTotal"></div><div class="actions no-print"><button class="action" id="copy">Скопировать</button><button class="action" id="print">Печать / PDF</button></div></div>
+      </section>
+      <section id="screen-menu" class="hidden"><h1>Меню</h1><p class="lead">Листай по дням или перейди к нужной дате.</p><div class="toolbar"><button class="iconbtn" id="prev" aria-label="Предыдущий день">‹</button><input id="weekDate" aria-label="Дата меню" inputmode="numeric"><button class="iconbtn" id="next" aria-label="Следующий день">›</button><button class="iconbtn today" id="today">Сегодня</button></div><div id="menuDay"></div><div class="day-pager"><div class="dots" id="dots"></div></div></section>
+      <section id="screen-cards" class="hidden"><h1>Техкарты</h1><p class="lead">Найди блюдо и пересчитай ингредиенты на нужное число порций.</p><div class="searchbar"><input id="cardQuery" placeholder="Например, куриная котлета"><button class="action" id="search">Найти</button></div><div id="cardNote" class="hint"></div><div id="cardCats"></div><div id="cardList"></div><div id="cardDetail" class="hidden"></div></section>
+    </main>
   </div>
-
-  <div class="card">
-    <div id="mode-dates">
-      <label>С какого и по какое число</label>
-      <div class="row">
-        <div><input id="from" inputmode="decimal" placeholder="1611" autocomplete="off"></div>
-        <div><input id="to" inputmode="decimal" placeholder="1811" autocomplete="off"></div>
-      </div>
-      <div class="tip" id="datenote">Пиши как удобно: 16.11 или 1611</div>
-    </div>
-    <div id="mode-days" class="hidden">
-      <label>Дни (например 15-17, 1,3,5 или 28-3)</label>
-      <input id="days" inputmode="numeric" placeholder="1-3" autocomplete="off">
-      <div class="tip">Меньше «с» = через конец цикла: 28-3</div>
-    </div>
-  </div>
-
-  <div class="card">
-    <label>Сколько человек</label>
-    <div class="row">
-      <div><input id="b" inputmode="numeric" placeholder="Завтрак"></div>
-      <div><input id="l" inputmode="numeric" placeholder="Обед"></div>
-      <div><input id="d" inputmode="numeric" placeholder="Ужин"></div>
-    </div>
-    <div style="margin-top:12px">
-      <label>Запас сверх людей (можно 0)</label>
-      <input id="reserve" inputmode="numeric" placeholder="0">
-    </div>
-  </div>
-
-  <button class="go" id="go">Посчитать</button>
-  <button class="go ghost mini" id="reset">Сбросить</button>
-  <div class="err" id="err"></div>
-
-  <div id="out" class="hidden">
-    <div class="head" id="head"></div>
-    <div id="list"></div>
-    <div class="total" id="total"></div>
-    <button class="go ghost" id="copy">Скопировать список</button>
-    <button class="go ghost" id="print">Печать / PDF</button>
-  </div>
-</div>
-
-<!-- ================= МЕНЮ ================= -->
-<div id="screen-menu" class="hidden">
-  <div class="weeknav">
-    <button id="prevWeek" aria-label="Предыдущий день">◀</button>
-    <input id="weekDate" inputmode="decimal" placeholder="13.11" autocomplete="off">
-    <button id="nextWeek" aria-label="Следующий день">▶</button>
-    <button id="thisWeek" class="todaybtn">Сегодня</button>
-  </div>
-  <div class="tip" id="weeknote" style="margin:-4px 0 10px"></div>
-  <div class="dayview" id="dayView"><div class="daytrack" id="menuList"></div></div>
-  <div class="daydots" id="dayDots"></div>
-</div>
-
-<!-- ================= КАРТЫ ================= -->
-<div id="screen-cards" class="hidden">
-  <div class="card">
-    <div class="row">
-      <div style="flex:2"><input id="cardQuery" placeholder="шницель куриный" autocomplete="off"></div>
-      <div><button class="go" id="cardSearch">Найти</button></div>
-    </div>
-    <div class="tip" id="cardNote"></div>
-  </div>
-
-  <div id="cardCats"></div>
-
-  <div id="cardNav" class="hidden">
-    <button class="catbtn back" id="cardBack">← Разделы</button>
-    <div class="tip" id="cardTitle" style="margin:0 0 10px"></div>
-  </div>
-
-  <div id="cardList"></div>
-
-  <div id="cardView" class="hidden">
-    <div class="card">
-      <div class="dayhead" id="cardName"></div>
-      <div class="row" style="margin-top:10px">
-        <div style="flex:2"><input id="portions" inputmode="numeric" placeholder="Сколько порций" autocomplete="off"></div>
-        <div><button class="go" id="cardCalc">Показать</button></div>
-      </div>
-    </div>
-    <div id="cardOut"></div>
-  </div>
-</div>
-
-<script src="data.js"></script>
-<script src="calc.js"></script>
-<script>
-(function () {
-  var A = window.APP, D = window.DATA;
-  var tg = window.Telegram && window.Telegram.WebApp;
-  if (tg) { tg.ready(); tg.expand(); }
-  // светлая или тёмная — как в Telegram (в браузере — как в системе)
-  var scheme = (tg && tg.colorScheme) ||
-    (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-  document.body.classList.toggle('light', scheme === 'light');
-
-  var $ = function (id) { return document.getElementById(id); };
-  function val(id) { return ($(id).value || '').trim(); }
-  function num(id) { var v = val(id); return v === '' ? 0 : parseInt(v, 10) || 0; }
-
-  // ---------- экраны ----------
-  function showScreen(name) {
-    ['order', 'menu', 'cards'].forEach(function (n) {
-      $('screen-' + n).classList.toggle('hidden', n !== name);
-      $('tab-' + n).classList.toggle('active', n === name);
-    });
-  }
-  $('tab-order').addEventListener('click', function () { showScreen('order'); });
-  $('tab-menu').addEventListener('click', function () { showScreen('menu'); renderMenu(); });
-  $('tab-cards').addEventListener('click', function () { showScreen('cards'); renderCardCats(); });
-
-  // ================= ЗАКАЗ =================
-  var lastText = '', orderMode = 'dates';
-
-  // ---------- запоминание ввода ----------
-  var LS_ORDER = 'kitchen.order', LS_WEEK = 'kitchen.menuWeek';
-
-  function saveOrder() {
-    try {
-      localStorage.setItem(LS_ORDER, JSON.stringify({
-        mode: orderMode, from: val('from'), to: val('to'), days: val('days'),
-        b: val('b'), l: val('l'), d: val('d'), reserve: val('reserve')
-      }));
-    } catch (e) {}
-  }
-
-  function restoreOrder() {
-    var s = null;
-    try { s = JSON.parse(localStorage.getItem(LS_ORDER) || 'null'); } catch (e) {}
-    if (!s) { setOrderMode('dates'); updateDateNote(); return; }
-    ['from', 'to', 'days', 'b', 'l', 'd', 'reserve'].forEach(function (id) {
-      if (typeof s[id] === 'string') $(id).value = s[id];
-    });
-    setOrderMode(s.mode === 'days' ? 'days' : 'dates');
-    updateDateNote();
-  }
-
-  function resetOrder() {
-    // «Сбросить» очищает поля, а не подставляет демо-значения
-    ['from', 'to', 'days', 'b', 'l', 'd', 'reserve'].forEach(function (id) { $(id).value = ''; });
-    setOrderMode('dates');
-    updateDateNote();
-    saveOrder();
-  }
-
-  function readSavedWeek() {
-    try {
-      var s = localStorage.getItem(LS_WEEK);
-      if (s) {
-        var d = new Date(s);
-        if (!isNaN(d.getTime())) return d;
-      }
-    } catch (e) {}
-    return new Date();
-  }
-
-  function setOrderMode(m) {
-    orderMode = m;
-    $('sub-dates').classList.toggle('active', m === 'dates');
-    $('sub-days').classList.toggle('active', m === 'days');
-    $('mode-dates').classList.toggle('hidden', m !== 'dates');
-    $('mode-days').classList.toggle('hidden', m !== 'days');
-  }
-  $('sub-dates').addEventListener('click', function () { setOrderMode('dates'); saveOrder(); });
-  $('sub-days').addEventListener('click', function () { setOrderMode('days'); saveOrder(); });
-
-  function updateDateNote() {
-    try {
-      var f = A.parseDate(val('from'));
-      var t = A.parseDate(val('to') || val('from'));
-      var days = A.datesToDays(f, t);
-      $('datenote').innerHTML = A.fmtDate(f) + ' — день ' + A.dateToDay(f) +
-        (days.length > 1 ? ', дни цикла: <b>' + A.daysLabel(days) + '</b>' : '');
-    } catch (e) {
-      $('datenote').textContent = 'Пиши как удобно: 16.11 или 1611';
-    }
-  }
-
-  function currentDays() {
-    if (orderMode === 'dates') {
-      var f = A.parseDate(val('from'));
-      var t = A.parseDate(val('to') || val('from'));
-      return { days: A.datesToDays(f, t), label: A.fmtDate(f) + (val('to') ? ' – ' + A.fmtDate(t) : '') };
-    }
-    var days = A.parseDays(val('days'));
-    if (!days.length) throw new Error('Укажи дни, например 1-3');
-    return { days: days, label: A.daysLabel(days) };
-  }
-
-  function renderOrder() {
-    var err = $('err'), out = $('out');
-    try {
-      var res = currentDays();
-      var people = { 'Завтрак': num('b'), 'Обед': num('l'), 'Ужин': num('d') };
-      if (!people['Завтрак'] && !people['Обед'] && !people['Ужин'])
-        throw new Error('Укажи, сколько человек едят');
-      var reserve = num('reserve');
-      if (reserve < 0) throw new Error('Запас не может быть отрицательным');
-
-      var items = A.calc(D.menu, D.recipes, res.days, people, reserve);
-      var g = A.groupOrder(items, D.categories, D.units);
-      if (!g.used) throw new Error('Заказ пустой — проверь дни и число людей');
-
-      err.textContent = '';
-      out.classList.remove('hidden');
-
-      var peopleTxt = ['Завтрак', 'Обед', 'Ужин']
-        .filter(function (m) { return people[m]; })
-        .map(function (m) { return m.toLowerCase() + ' ' + people[m]; })
-        .join(' · ');
-      $('head').innerHTML = 'Заказ на <b>' + res.label + '</b><br>Люди: ' + peopleTxt +
-        (reserve ? ' + запас ' + reserve : '');
-
-      var html = '';
-      g.groups.forEach(function (cat) {
-        html += '<div class="cat">' + cat.title + '</div>';
-        cat.items.forEach(function (it) {
-          html += '<div class="item"><span>' + it.name + '</span><span class="qty">' +
-                  it.qty + ' ' + it.unit + '</span></div>';
-        });
-      });
-      $('list').innerHTML = html;
-      $('total').textContent = 'Позиций: ' + g.used;
-
-      lastText = 'Заказ на ' + res.label + '\nЛюди: ' + peopleTxt +
-                 (reserve ? ' + запас ' + reserve : '') + '\n\n';
-      g.groups.forEach(function (cat) {
-        lastText += cat.title + '\n';
-        cat.items.forEach(function (it) { lastText += '  ' + it.name + ' — ' + it.qty + ' ' + it.unit + '\n'; });
-        lastText += '\n';
-      });
-      lastText += 'Позиций: ' + g.used;
-    } catch (e) {
-      err.textContent = e.message;
-      out.classList.add('hidden');
-    }
-  }
-
-  $('go').addEventListener('click', renderOrder);
-  ['from', 'to'].forEach(function (id) { $(id).addEventListener('input', updateDateNote); });
-  ['from', 'to', 'days', 'b', 'l', 'd', 'reserve'].forEach(function (id) {
-    $(id).addEventListener('input', saveOrder);
-  });
-  $('reset').addEventListener('click', resetOrder);
-  $('copy').addEventListener('click', function () {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(lastText).then(function () {
-        $('copy').textContent = 'Скопировано ✓';
-        setTimeout(function () { $('copy').textContent = 'Скопировать список'; }, 1500);
-      });
-    }
-  });
-  $('print').addEventListener('click', function () { window.print(); });
-
-  // ================= МЕНЮ: один день на экран, свайп =================
-  // В «ленте» сразу три недели: прошлая, текущая, следующая. Видимый день — trackIdx (0..20).
-  // У края лента перецентровывается, поэтому свайпать можно сколько угодно без рывков.
-  var DAY_MS = 86400000;
-  var weekStart = new Date();   // понедельник средней недели
-  var trackIdx = 7;             // 7..13 — средняя (видимая) неделя
-  var dragState = null;
-
-  function mondayOf(d) {
-    var wd = (d.getDay() + 6) % 7;
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - wd);
-  }
-  function shiftDays(d, n) {
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
-  }
-  function sameDate(a, b) {
-    return a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
-  }
-  function dayInWeek() { return trackIdx - 7; }                      // 0 = понедельник
-  function visibleDate() { return shiftDays(weekStart, trackIdx - 7); }
-
-  function cardHtml(d, today, weekOffset) {
-    var isToday = sameDate(d.date, today);
-    var html = '<div class="daycard' + (isToday ? ' today' : '') + '" data-week="' + weekOffset + '">' +
-            '<div class="dayhead">' + d.name + ', ' + A.fmtDate(d.date).slice(0, 5) +
-            ' <span>· день ' + d.day + (isToday ? ' · сегодня' : '') + '</span></div>';
-    ['Завтрак', 'Обед', 'Ужин'].forEach(function (m) {
-      var rows = D.menu.filter(function (r) { return r.day_no === d.day && r.meal === m; });
-      if (!rows.length) return;
-      html += '<div class="mlabel">' + m + '</div>';
-      rows.forEach(function (r) {
-        html += '<div class="dishrow"><span class="num">' + r.num + '</span>' +
-                '<span class="name">' + r.dish + '</span>' +
-                '<span class="out">' + (r.out || '') + '</span></div>';
-      });
-    });
-    return html + '</div>';
-  }
-
-  function viewWidth() {
-    var v = $('dayView');
-    return (v && (v.clientWidth || v.offsetWidth)) || 320;
-  }
-
-  // сдвигаем «ленту» дней; animate=false — мгновенно (после перерисовки)
-  function moveTrack(px, animate) {
-    var track = $('menuList');
-    track.style.transition = animate ? '' : 'none';
-    track.style.transform = 'translate3d(' + px + 'px,0,0)';
-    if (!animate) {
-      void track.offsetWidth;                      // пересчёт, чтобы скачок не анимировался
-      requestAnimationFrame(function () { track.style.transition = ''; });
-    }
-  }
-
-  function highlightDay() {
-    var day = Math.max(0, Math.min(6, dayInWeek()));
-    var dots = $('dayDots').children;
-    for (var i = 0; i < dots.length; i++) dots[i].classList.toggle('on', i === day);
-    var vis = visibleDate();
-    var week = A.weekDays(vis);                    // неделя видимого дня
-    $('weeknote').textContent = 'Свайп влево-вправо — соседний день';
-    $('weekDate').value = A.fmtDate(week[0].date).slice(0, 5) + ' – ' + A.fmtDate(week[6].date).slice(0, 5);
-  }
-
-  function renderMenu() {
-    var today = new Date();
-    var html = '';
-    [-1, 0, 1].forEach(function (w) {
-      A.weekDays(shiftDays(weekStart, 7 * w)).forEach(function (d) { html += cardHtml(d, today, w); });
-    });
-    $('menuList').innerHTML = html;
-
-    var dots = '';
-    ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(function (n, i) {
-      dots += '<button class="daydot" data-i="' + i + '" aria-label="' + n + '"></button>';
-    });
-    $('dayDots').innerHTML = dots;
-
-    moveTrack(-trackIdx * viewWidth(), false);
-    highlightDay();
-    try { localStorage.setItem(LS_WEEK, weekStart.toISOString()); } catch (e) {}
-  }
-
-  // ставит видимый день; за пределами средней недели лента перецентровывается
-  function setDay(idx, animate) {
-    trackIdx = Math.max(0, Math.min(20, idx));
-    if (trackIdx < 7 || trackIdx > 13) {
-      var shift = trackIdx < 7 ? -7 : 7;
-      weekStart = shiftDays(weekStart, shift);
-      trackIdx -= shift;
-      renderMenu();                                // перерисовать три недели и встать на место
-      return;
-    }
-    moveTrack(-trackIdx * viewWidth(), animate !== false);
-    highlightDay();
-  }
-  function goDay(delta) { setDay(trackIdx + delta, true); }
-
-  // ---------- свайп ----------
-  function dragStart(x, y, id) {
-    if (dragState) return;
-    dragState = { x: x, y: y, dx: 0, moved: false, id: id, skip: false };
-  }
-  function dragMove(x, y, id) {
-    var s = dragState;
-    if (!s || s.id !== id || s.skip) return;
-    var dx = x - s.x, dy = y - s.y;
-    if (!s.moved) {
-      if (Math.abs(dx) < 7 && Math.abs(dy) < 7) return;
-      if (Math.abs(dy) >= Math.abs(dx)) { s.skip = true; return; }   // вертикальная прокрутка — не мешаем
-      s.moved = true;
-      $('menuList').style.transition = 'none';
-    }
-    s.dx = dx;
-    var base = -trackIdx * viewWidth();
-    var shift = base + dx;
-    // у самого края лента упирается
-    if ((trackIdx === 0 && dx > 0) || (trackIdx === 20 && dx < 0)) shift = base + dx * 0.3;
-    $('menuList').style.transform = 'translate3d(' + shift + 'px,0,0)';
-  }
-  function dragEnd(id) {
-    var s = dragState;
-    dragState = null;
-    if (!s || s.id !== id || !s.moved) return;
-    $('menuList').style.transition = '';
-    var limit = Math.min(70, viewWidth() * 0.22);
-    if (s.dx <= -limit) goDay(1);
-    else if (s.dx >= limit) goDay(-1);
-    else setDay(trackIdx, true);
-  }
-
-  var dv = $('dayView');
-  if (window.PointerEvent) {
-    dv.addEventListener('pointerdown', function (e) {
-      dragStart(e.clientX, e.clientY, e.pointerId);
-      try { dv.setPointerCapture(e.pointerId); } catch (err) {}   // палец может уйти за пределы блока
-    });
-    dv.addEventListener('pointermove', function (e) { dragMove(e.clientX, e.clientY, e.pointerId); });
-    dv.addEventListener('pointerup', function (e) { dragEnd(e.pointerId); });
-    dv.addEventListener('pointercancel', function () { dragState = null; setDay(trackIdx, true); });
-  } else {
-    // запасной путь для старых WebView без pointer events
-    dv.addEventListener('touchstart', function (e) { dragStart(e.touches[0].clientX, e.touches[0].clientY, 1); }, { passive: true });
-    dv.addEventListener('touchmove', function (e) { dragMove(e.touches[0].clientX, e.touches[0].clientY, 1); }, { passive: true });
-    dv.addEventListener('touchend', function () { dragEnd(1); });
-    dv.addEventListener('touchcancel', function () { dragState = null; setDay(trackIdx, true); });
-  }
-  window.addEventListener('resize', function () {
-    if ($('screen-menu') && !$('screen-menu').classList.contains('hidden')) moveTrack(-trackIdx * viewWidth(), false);
-  });
-
-  $('dayDots').addEventListener('click', function (e) {
-    var t = e.target;
-    while (t && t !== this && !(t.classList && t.classList.contains('daydot'))) t = t.parentNode;
-    if (t && t.classList && t.classList.contains('daydot')) setDay(7 + parseInt(t.getAttribute('data-i'), 10), true);
-  });
-
-  $('prevWeek').addEventListener('click', function () { goDay(-1); });
-  $('nextWeek').addEventListener('click', function () { goDay(1); });
-  $('weekDate').addEventListener('change', function () {
-    try {
-      var d = A.parseDate(val('weekDate'));
-      weekStart = mondayOf(d);
-      trackIdx = 7 + Math.round((d - new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate())) / DAY_MS);
-      renderMenu();
-    } catch (e) {
-      highlightDay();
-    }
-  });
-  $('thisWeek').addEventListener('click', function () {
-    var today = new Date();
-    weekStart = mondayOf(today);
-    trackIdx = 7 + (today.getDay() + 6) % 7;
-    renderMenu();
-  });
-
-  // ================= КАРТЫ =================
-  var curCard = null;
-
-  function showCats() {
-    $('cardCats').classList.remove('hidden');
-    $('cardNav').classList.add('hidden');
-    $('cardList').innerHTML = '';
-    $('cardView').classList.add('hidden');
-    $('cardNote').textContent = '';
-  }
-
-  function renderCardCats() {
-    showCats();
-    var html = '';
-    D.card_categories.forEach(function (cat, i) {
-      html += '<button class="catbtn" data-cat="' + i + '">' + cat[0] + '</button>';
-    });
-    $('cardCats').innerHTML = html;
-    Array.prototype.forEach.call($('cardCats').children, function (btn) {
-      btn.addEventListener('click', function () {
-        var idx = parseInt(btn.getAttribute('data-cat'), 10);
-        var pages = D.card_categories[idx][1];
-        var list = D.cards.filter(function (c) { return pages.indexOf(c.page) >= 0; });
-        showList(D.card_categories[idx][0], list);
-      });
-    });
-  }
-
-  function showList(title, list) {
-    $('cardCats').classList.add('hidden');
-    $('cardNav').classList.remove('hidden');
-    $('cardView').classList.add('hidden');
-    $('cardTitle').textContent = title + (list.length ? ' — ' + list.length : '');
-    var html = '';
-    list.forEach(function (c) {
-      html += '<button class="cardbtn" data-page="' + c.page + '">' + c.dish +
-              (c.output ? ' <span class="coutput">' + c.output + '</span>' : '') + '</button>';
-    });
-    $('cardList').innerHTML = html || '<div class="tip">Ничего не нашлось</div>';
-    Array.prototype.forEach.call($('cardList').children, function (btn) {
-      btn.addEventListener('click', function () {
-        var page = parseInt(btn.getAttribute('data-page'), 10);
-        openCard(D.cards.filter(function (c) { return c.page === page; })[0]);
-      });
-    });
-  }
-
-  function openCard(card) {
-    curCard = card;
-    $('cardList').classList.add('hidden');
-    $('cardView').classList.remove('hidden');
-    $('cardName').innerHTML = card.dish + (card.output ? ' <span class="coutput">' + card.output + '</span>' : '');
-    $('cardOut').innerHTML = '';
-    $('portions').value = '';
-    $('portions').focus();
-  }
-
-  $('cardBack').addEventListener('click', function () {
-    if (curCard) {
-      curCard = null;
-      $('cardView').classList.add('hidden');
-      $('cardList').classList.remove('hidden');
-    } else {
-      showCats();
-    }
-  });
-
-  function renderCardOut() {
-    if (!curCard) return;
-    var n = num('portions');
-    if (!(n > 0)) { $('cardOut').innerHTML = '<div class="err">Напиши число порций больше нуля</div>'; return; }
-    var per = curCard.per || 1;
-    var lines = curCard.ing.map(function (it) {
-      return '<div class="item"><span>' + it[0] + '</span><span class="qty">' +
-             A.fmtQty(it[2] * n / per, it[1]) + '</span></div>';
-    }).join('');
-    var w = (n % 10 === 1 && n % 100 !== 11) ? 'порцию'
-          : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 'порции' : 'порций');
-    $('cardOut').innerHTML = '<div class="card"><div class="head">На ' + n + ' ' + w + '</div>' + lines + '</div>';
-  }
-
-  $('cardSearch').addEventListener('click', function () {
-    var q = val('cardQuery');
-    if (!q) { $('cardNote').textContent = 'Напиши название блюда'; return; }
-    var list = A.findCards(q, D.cards);
-    $('cardNote').textContent = '';
-    showList('Поиск: ' + q, list);
-  });
-  $('cardQuery').addEventListener('keydown', function (ev) {
-    if (ev.key === 'Enter') $('cardSearch').click();
-  });
-  $('cardCalc').addEventListener('click', renderCardOut);
-  $('portions').addEventListener('keydown', function (ev) {
-    if (ev.key === 'Enter') renderCardOut();
-  });
-
-  // ---------- старт ----------
-  $('days').value = '1-3';
-  // при открытии: сегодняшний день, если он в сохранённой неделе, иначе понедельник
-  weekStart = mondayOf(readSavedWeek());
-  var t0 = new Date();
-  var wi = Math.round((new Date(t0.getFullYear(), t0.getMonth(), t0.getDate()) -
-                       new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate())) / DAY_MS);
-  trackIdx = (wi >= 0 && wi <= 6) ? 7 + wi : 7;
-  restoreOrder();
-  renderMenu();
-})();
-</script>
+  <nav class="bottom-nav"><div class="nav"><button class="active" data-screen="order"><span>▤</span>Заказ</button><button data-screen="menu"><span>▦</span>Меню</button><button data-screen="cards"><span>▣</span>Техкарты</button></div></nav>
+  <script src="data.js"></script><script src="calc.js"></script>
+  <script>
+  (function(){
+    'use strict';
+    var A=window.APP,D=window.DATA,tg=window.Telegram&&window.Telegram.WebApp;
+    if(tg){tg.ready();tg.expand();}
+    var $=function(id){return document.getElementById(id);}, mode='date', resultText='', curDay=new Date(), card=null;
+    var store='kitchen.v2.order', weekStore='kitchen.v2.date';
+    function value(id){return ($(id).value||'').trim();}
+    function number(id){var n=parseInt(value(id)||'0',10);return isFinite(n)?n:0;}
+    function switchMode(next){mode=next;$('modeDate').classList.toggle('active',mode==='date');$('modeCycle').classList.toggle('active',mode==='cycle');$('dateFields').classList.toggle('hidden',mode!=='date');$('cycleFields').classList.toggle('hidden',mode!=='cycle');save();}
+    function save(){try{localStorage.setItem(store,JSON.stringify({mode:mode,from:value('from'),to:value('to'),days:value('days'),b:value('b'),l:value('l'),d:value('d'),reserve:value('reserve')}));}catch(e){}}
+    function restore(){var s;try{s=JSON.parse(localStorage.getItem(store)||'null');}catch(e){}if(s){['from','to','days','b','l','d','reserve'].forEach(function(k){if(typeof s[k]==='string')$(k).value=s[k];});switchMode(s.mode==='cycle'?'cycle':'date');}else clearFields();}
+    function clearFields(){['from','to','days','b','l','d','reserve'].forEach(function(k){$(k).value='';});$('output').classList.add('hidden');$('error').classList.add('hidden');resultText='';switchMode('date');save();}
+    $('modeDate').onclick=function(){switchMode('date');};$('modeCycle').onclick=function(){switchMode('cycle');};
+    function calculate(){var days,label,people={'Завтрак':number('b'),'Обед':number('l'),'Ужин':number('d')},reserve=number('reserve');try{if(mode==='date'){if(!value('from'))throw Error('Укажи даты заказа: с какого и по какое число');var f=A.parseDate(value('from')),t=A.parseDate(value('to')||value('from'));days=A.datesToDays(f,t);label=A.fmtDate(f)+(value('to')?' – '+A.fmtDate(t):'');}else{days=A.parseDays(value('days'));label=A.daysLabel(days);if(!days.length)throw Error('Укажи дни меню, например 1-3');}if(reserve<0)throw Error('Запас не может быть отрицательным');if(!people['Завтрак']&&!people['Обед']&&!people['Ужин'])throw Error('Укажи число человек хотя бы для одного приёма пищи');var items=A.calc(D.menu,D.recipes,days,people,reserve),grouped=A.groupOrder(items,D.categories,D.units);if(!grouped.used)throw Error('Заказ пустой. Проверь период и число человек.');var meals=Object.keys(people).filter(function(k){return people[k]>0;}).map(function(k){return k.toLowerCase()+' '+people[k];}).join(' · ');$('resultHead').innerHTML='<strong>Заказ на '+label+'</strong>'+meals+(reserve?' · запас '+reserve:'');var html='',text='Заказ на '+label+'\nЛюди: '+meals+(reserve?' + запас '+reserve:'')+'\n\n';grouped.groups.forEach(function(g){html+='<section class="group"><h3>'+g.title+'</h3>';text+=g.title+'\n';g.items.forEach(function(i){html+='<div class="item"><span>'+i.name+'</span><span class="qty">'+i.qty+' '+i.unit+'</span></div>';text+='  '+i.name+' — '+i.qty+' '+i.unit+'\n';});html+='</section>';text+='\n';});$('resultList').innerHTML=html;$('resultTotal').textContent='Всего позиций: '+grouped.used;$('output').classList.remove('hidden');$('error').classList.add('hidden');resultText=text+'Позиций: '+grouped.used;save();}catch(e){$('output').classList.add('hidden');$('error').textContent=e.message;$('error').classList.remove('hidden');}}
+    $('calculate').onclick=calculate;$('reset').onclick=clearFields;
+    ['from','to','days','b','l','d','reserve'].forEach(function(id){$(id).addEventListener('input',save);});
+    $('copy').onclick=function(){if(!resultText)return;var done=function(){$('copy').textContent='Скопировано';setTimeout(function(){$('copy').textContent='Скопировать';},1300);};if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(resultText).then(done);else{var t=document.createElement('textarea');t.value=resultText;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();done();}};
+    $('print').onclick=function(){window.print();};
+    function setScreen(name){['order','menu','cards'].forEach(function(n){$('screen-'+n).classList.toggle('hidden',name!==n);});Array.prototype.forEach.call(document.querySelectorAll('.nav button'),function(b){b.classList.toggle('active',b.getAttribute('data-screen')===name);});if(name==='menu')renderMenu();if(name==='cards')renderCats();}
+    document.querySelectorAll('.nav button').forEach(function(b){b.onclick=function(){setScreen(b.getAttribute('data-screen'));};});
+    function monday(d){var w=(d.getDay()+6)%7;return new Date(d.getFullYear(),d.getMonth(),d.getDate()-w);}
+    function shift(d,n){return new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);}
+    function fmt(d){return A.fmtDate(d).slice(0,5);}
+    function renderMenu(){var week=A.weekDays(curDay),hit=week.filter(function(x){return x.date.getDate()===curDay.getDate()&&x.date.getMonth()===curDay.getMonth()&&x.date.getFullYear()===curDay.getFullYear();})[0];if(!hit){curDay=monday(curDay);week=A.weekDays(curDay);hit=week[0];}var day=hit.day,today=new Date(),meals=['Завтрак','Обед','Ужин'],html='<article class="day-panel"><div class="day-title">'+hit.name+', '+fmt(curDay)+' <small>· день '+day+(fmt(today)===fmt(curDay)?' · сегодня':'')+'</small></div>';meals.forEach(function(m){var rows=D.menu.filter(function(r){return r.day_no===day&&r.meal===m;});if(rows.length){html+='<section class="meal"><h3>'+m+'</h3>';rows.forEach(function(r){html+='<div class="dish">'+r.dish+(r.out?' <span style="color:var(--muted)">· '+r.out+'</span>':'')+'</div>';});html+='</section>';}});$('menuDay').innerHTML=html+'</article>';$('weekDate').value=fmt(curDay);var wd=(curDay.getDay()+6)%7,dots='';for(var i=0;i<7;i++)dots+='<button class="dot '+(i===wd?'active':'')+'" data-day="'+i+'" aria-label="День '+(i+1)+'"></button>';$('dots').innerHTML=dots;Array.prototype.forEach.call($('dots').children,function(b){b.onclick=function(){curDay=shift(monday(curDay),parseInt(b.getAttribute('data-day'),10));renderMenu();};});try{localStorage.setItem(weekStore,curDay.toISOString());}catch(e){}}
+    $('prev').onclick=function(){curDay=shift(curDay,-1);renderMenu();};$('next').onclick=function(){curDay=shift(curDay,1);renderMenu();};$('today').onclick=function(){curDay=new Date();renderMenu();};$('weekDate').onchange=function(){try{curDay=A.parseDate(value('weekDate'));renderMenu();}catch(e){$('weekDate').value=fmt(curDay);}};
+    var colors=['#b45e36','#47866b','#ae8b32','#ad5148','#547a9a','#a36c37','#668057','#39738a'];
+    function renderCats(){var html='';D.card_categories.forEach(function(c,i){html+='<button class="category" style="--cat:'+colors[i%colors.length]+'" data-cat="'+i+'">'+c[0]+'</button>';});$('cardCats').innerHTML=html;$('cardList').innerHTML='';$('cardDetail').classList.add('hidden');Array.prototype.forEach.call($('cardCats').children,function(b){b.onclick=function(){var i=parseInt(b.getAttribute('data-cat'),10),pages=D.card_categories[i][1];showCards(D.cards.filter(function(c){return pages.indexOf(c.page)>=0;}),D.card_categories[i][0]);};});}
+    function showCards(list,title){$('cardCats').classList.add('hidden');$('cardDetail').classList.add('hidden');$('cardNote').textContent=title+(list.length?' · '+list.length:'');$('cardList').innerHTML=list.map(function(c){return '<button class="category" data-page="'+c.page+'">'+c.dish+'</button>';}).join('')||'<p class="hint">Ничего не найдено</p>';Array.prototype.forEach.call($('cardList').children,function(b){b.onclick=function(){openCard(D.cards.filter(function(c){return c.page===parseInt(b.getAttribute('data-page'),10);})[0]);};});}
+    function openCard(c){card=c;$('cardList').classList.add('hidden');$('cardDetail').classList.remove('hidden');$('cardDetail').innerHTML='<button class="action" id="backCards">← К списку</button><div class="recipe"><strong>'+c.dish+'</strong><p class="hint">'+(c.output?'Выход: '+c.output:'')+'</p><label for="portions">Количество порций</label><div class="row"><input id="portions" inputmode="numeric" placeholder="20"><button class="primary" id="showRecipe" style="max-width:140px">Пересчитать</button></div><div id="recipeOut"></div></div>';$('backCards').onclick=function(){$('cardDetail').classList.add('hidden');$('cardList').classList.remove('hidden');};$('showRecipe').onclick=renderRecipe;$('portions').onkeydown=function(e){if(e.key==='Enter')renderRecipe();};}
+    function renderRecipe(){var n=parseInt($('portions').value,10);if(!(n>0)){$('recipeOut').innerHTML='<p class="error">Укажи число порций больше нуля.</p>';return;}var per=card.per||1,html='';card.ing.forEach(function(i){html+='<div class="item"><span>'+i[0]+'</span><span class="qty">'+A.fmtQty(i[2]*n/per,i[1])+'</span></div>';});$('recipeOut').innerHTML='<div class="divider"></div><strong>На '+n+' порций</strong>'+html;}
+    $('search').onclick=function(){var q=value('cardQuery');if(!q){$('cardNote').textContent='Введи название блюда.';return;}var found=A.findCards(q,D.cards);if(!found.length){$('cardCats').classList.add('hidden');showCards([], 'Поиск: '+q);return;}showCards(found,'Поиск: '+q);};$('cardQuery').onkeydown=function(e){if(e.key==='Enter')$('search').click();};
+    try{var saved=localStorage.getItem(weekStore);if(saved&&!isNaN(new Date(saved).getTime()))curDay=new Date(saved);}catch(e){}
+    $('cycleChip').textContent='ЦИКЛ · ДЕНЬ '+A.dateToDay(new Date());restore();renderMenu();
+  })();
+  </script>
 </body>
 </html>
