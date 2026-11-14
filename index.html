@@ -164,6 +164,21 @@
     background: var(--accent); color: var(--accent-text); border-color: transparent;
     box-shadow: 0 4px 12px rgba(0,0,0,.2);
   }
+  /* меню по одному дню: свайп влево-вправо */
+  .dayview { overflow: hidden; padding: 2px 0 14px; touch-action: pan-y; }
+  .daytrack {
+    display: flex; align-items: stretch;
+    transition: transform .26s cubic-bezier(.22,.72,.28,1);
+    will-change: transform;
+  }
+  /* на время перетаскивания плавность выключается, иначе палец «плывёт» */
+  .daytrack .daycard { flex: 0 0 100%; min-width: 0; box-shadow: 0 3px 12px rgba(0,0,0,.12); }
+  .daydots { display: flex; justify-content: center; align-items: center; gap: 9px; margin: 2px 0 4px; min-height: 14px; }
+  .daydot {
+    width: 8px; height: 8px; padding: 0; border: none; border-radius: 50%;
+    background: var(--line); transition: background .18s ease, transform .18s ease;
+  }
+  .daydot.on { background: var(--accent); transform: scale(1.45); }
 
   /* карты */
   .catbtn {
@@ -247,6 +262,12 @@
     .qty, .head, .head b, .total, .mlabel, .dayhead, .dayhead span,
     .dishrow .num, .dishrow .out, .coutput { color: #000; }
     .dayhead { font-size: 12pt; margin-bottom: 4px; }
+    /* на печати — только видимая неделя, без слайдера */
+    .dayview { overflow: visible; padding: 0; }
+    .daytrack { display: block; transform: none !important; transition: none; }
+    .daytrack .daycard { display: block; flex: none; box-shadow: none; }
+    .daytrack .daycard[data-week="-1"], .daytrack .daycard[data-week="1"] { display: none !important; }
+    .daydots { display: none; }
   }
 
   @media (min-width: 620px) {
@@ -315,13 +336,14 @@
 <!-- ================= МЕНЮ ================= -->
 <div id="screen-menu" class="hidden">
   <div class="weeknav">
-    <button id="prevWeek" aria-label="Предыдущая неделя">◀</button>
-    <input id="weekDate" inputmode="numeric" placeholder="13.11" autocomplete="off">
-    <button id="nextWeek" aria-label="Следующая неделя">▶</button>
+    <button id="prevWeek" aria-label="Предыдущий день">◀</button>
+    <input id="weekDate" inputmode="decimal" placeholder="13.11" autocomplete="off">
+    <button id="nextWeek" aria-label="Следующий день">▶</button>
     <button id="thisWeek" class="todaybtn">Сегодня</button>
   </div>
-  <div class="tip" id="weeknote" style="margin:-4px 0 12px"></div>
-  <div id="menuList"></div>
+  <div class="tip" id="weeknote" style="margin:-4px 0 10px"></div>
+  <div class="dayview" id="dayView"><div class="daytrack" id="menuList"></div></div>
+  <div class="daydots" id="dayDots"></div>
 </div>
 
 <!-- ================= КАРТЫ ================= -->
@@ -525,51 +547,180 @@
   });
   $('print').addEventListener('click', function () { window.print(); });
 
-  // ================= МЕНЮ =================
-  var menuBase = new Date();
+  // ================= МЕНЮ: один день на экран, свайп =================
+  // В «ленте» сразу три недели: прошлая, текущая, следующая. Видимый день — trackIdx (0..20).
+  // У края лента перецентровывается, поэтому свайпать можно сколько угодно без рывков.
+  var DAY_MS = 86400000;
+  var weekStart = new Date();   // понедельник средней недели
+  var trackIdx = 7;             // 7..13 — средняя (видимая) неделя
+  var dragState = null;
 
-  function renderMenu() {
-    var days = A.weekDays(menuBase);
-    var today = new Date();
-    var html = '<div class="days">';
-    days.forEach(function (d) {
-      var isToday = d.date.getDate() === today.getDate() &&
-                    d.date.getMonth() === today.getMonth() &&
-                    d.date.getFullYear() === today.getFullYear();
-      html += '<div class="daycard' + (isToday ? ' today' : '') + '">' +
-              '<div class="dayhead">' + d.name + ', ' + A.fmtDate(d.date).slice(0, 5) +
-              ' <span>· день ' + d.day + (isToday ? ' · сегодня' : '') + '</span></div>';
-      ['Завтрак', 'Обед', 'Ужин'].forEach(function (m) {
-        var rows = D.menu.filter(function (r) { return r.day_no === d.day && r.meal === m; });
-        if (!rows.length) return;
-        html += '<div class="mlabel">' + m + '</div>';
-        rows.forEach(function (r) {
-          html += '<div class="dishrow"><span class="num">' + r.num + '</span>' +
-                  '<span class="name">' + r.dish + '</span>' +
-                  '<span class="out">' + (r.out || '') + '</span></div>';
-        });
+  function mondayOf(d) {
+    var wd = (d.getDay() + 6) % 7;
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - wd);
+  }
+  function shiftDays(d, n) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  }
+  function sameDate(a, b) {
+    return a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+  }
+  function dayInWeek() { return trackIdx - 7; }                      // 0 = понедельник
+  function visibleDate() { return shiftDays(weekStart, trackIdx - 7); }
+
+  function cardHtml(d, today, weekOffset) {
+    var isToday = sameDate(d.date, today);
+    var html = '<div class="daycard' + (isToday ? ' today' : '') + '" data-week="' + weekOffset + '">' +
+            '<div class="dayhead">' + d.name + ', ' + A.fmtDate(d.date).slice(0, 5) +
+            ' <span>· день ' + d.day + (isToday ? ' · сегодня' : '') + '</span></div>';
+    ['Завтрак', 'Обед', 'Ужин'].forEach(function (m) {
+      var rows = D.menu.filter(function (r) { return r.day_no === d.day && r.meal === m; });
+      if (!rows.length) return;
+      html += '<div class="mlabel">' + m + '</div>';
+      rows.forEach(function (r) {
+        html += '<div class="dishrow"><span class="num">' + r.num + '</span>' +
+                '<span class="name">' + r.dish + '</span>' +
+                '<span class="out">' + (r.out || '') + '</span></div>';
       });
-      html += '</div>';
     });
-    html += '</div>';
-    $('menuList').innerHTML = html;
-    $('weekDate').value = A.fmtDate(days[0].date).slice(0, 5) + ' – ' + A.fmtDate(days[6].date).slice(0, 5);
-    try { localStorage.setItem(LS_WEEK, menuBase.toISOString()); } catch (e) {}
+    return html + '</div>';
   }
 
-  $('prevWeek').addEventListener('click', function () {
-    menuBase = new Date(menuBase.getFullYear(), menuBase.getMonth(), menuBase.getDate() - 7);
-    renderMenu();
+  function viewWidth() {
+    var v = $('dayView');
+    return (v && (v.clientWidth || v.offsetWidth)) || 320;
+  }
+
+  // сдвигаем «ленту» дней; animate=false — мгновенно (после перерисовки)
+  function moveTrack(px, animate) {
+    var track = $('menuList');
+    track.style.transition = animate ? '' : 'none';
+    track.style.transform = 'translate3d(' + px + 'px,0,0)';
+    if (!animate) {
+      void track.offsetWidth;                      // пересчёт, чтобы скачок не анимировался
+      requestAnimationFrame(function () { track.style.transition = ''; });
+    }
+  }
+
+  function highlightDay() {
+    var day = Math.max(0, Math.min(6, dayInWeek()));
+    var dots = $('dayDots').children;
+    for (var i = 0; i < dots.length; i++) dots[i].classList.toggle('on', i === day);
+    var vis = visibleDate();
+    var week = A.weekDays(vis);                    // неделя видимого дня
+    $('weeknote').textContent = 'Свайп влево-вправо — соседний день';
+    $('weekDate').value = A.fmtDate(week[0].date).slice(0, 5) + ' – ' + A.fmtDate(week[6].date).slice(0, 5);
+  }
+
+  function renderMenu() {
+    var today = new Date();
+    var html = '';
+    [-1, 0, 1].forEach(function (w) {
+      A.weekDays(shiftDays(weekStart, 7 * w)).forEach(function (d) { html += cardHtml(d, today, w); });
+    });
+    $('menuList').innerHTML = html;
+
+    var dots = '';
+    ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(function (n, i) {
+      dots += '<button class="daydot" data-i="' + i + '" aria-label="' + n + '"></button>';
+    });
+    $('dayDots').innerHTML = dots;
+
+    moveTrack(-trackIdx * viewWidth(), false);
+    highlightDay();
+    try { localStorage.setItem(LS_WEEK, weekStart.toISOString()); } catch (e) {}
+  }
+
+  // ставит видимый день; за пределами средней недели лента перецентровывается
+  function setDay(idx, animate) {
+    trackIdx = Math.max(0, Math.min(20, idx));
+    if (trackIdx < 7 || trackIdx > 13) {
+      var shift = trackIdx < 7 ? -7 : 7;
+      weekStart = shiftDays(weekStart, shift);
+      trackIdx -= shift;
+      renderMenu();                                // перерисовать три недели и встать на место
+      return;
+    }
+    moveTrack(-trackIdx * viewWidth(), animate !== false);
+    highlightDay();
+  }
+  function goDay(delta) { setDay(trackIdx + delta, true); }
+
+  // ---------- свайп ----------
+  function dragStart(x, y, id) {
+    if (dragState) return;
+    dragState = { x: x, y: y, dx: 0, moved: false, id: id, skip: false };
+  }
+  function dragMove(x, y, id) {
+    var s = dragState;
+    if (!s || s.id !== id || s.skip) return;
+    var dx = x - s.x, dy = y - s.y;
+    if (!s.moved) {
+      if (Math.abs(dx) < 7 && Math.abs(dy) < 7) return;
+      if (Math.abs(dy) >= Math.abs(dx)) { s.skip = true; return; }   // вертикальная прокрутка — не мешаем
+      s.moved = true;
+      $('menuList').style.transition = 'none';
+    }
+    s.dx = dx;
+    var base = -trackIdx * viewWidth();
+    var shift = base + dx;
+    // у самого края лента упирается
+    if ((trackIdx === 0 && dx > 0) || (trackIdx === 20 && dx < 0)) shift = base + dx * 0.3;
+    $('menuList').style.transform = 'translate3d(' + shift + 'px,0,0)';
+  }
+  function dragEnd(id) {
+    var s = dragState;
+    dragState = null;
+    if (!s || s.id !== id || !s.moved) return;
+    $('menuList').style.transition = '';
+    var limit = Math.min(70, viewWidth() * 0.22);
+    if (s.dx <= -limit) goDay(1);
+    else if (s.dx >= limit) goDay(-1);
+    else setDay(trackIdx, true);
+  }
+
+  var dv = $('dayView');
+  if (window.PointerEvent) {
+    dv.addEventListener('pointerdown', function (e) {
+      dragStart(e.clientX, e.clientY, e.pointerId);
+      try { dv.setPointerCapture(e.pointerId); } catch (err) {}   // палец может уйти за пределы блока
+    });
+    dv.addEventListener('pointermove', function (e) { dragMove(e.clientX, e.clientY, e.pointerId); });
+    dv.addEventListener('pointerup', function (e) { dragEnd(e.pointerId); });
+    dv.addEventListener('pointercancel', function () { dragState = null; setDay(trackIdx, true); });
+  } else {
+    // запасной путь для старых WebView без pointer events
+    dv.addEventListener('touchstart', function (e) { dragStart(e.touches[0].clientX, e.touches[0].clientY, 1); }, { passive: true });
+    dv.addEventListener('touchmove', function (e) { dragMove(e.touches[0].clientX, e.touches[0].clientY, 1); }, { passive: true });
+    dv.addEventListener('touchend', function () { dragEnd(1); });
+    dv.addEventListener('touchcancel', function () { dragState = null; setDay(trackIdx, true); });
+  }
+  window.addEventListener('resize', function () {
+    if ($('screen-menu') && !$('screen-menu').classList.contains('hidden')) moveTrack(-trackIdx * viewWidth(), false);
   });
-  $('nextWeek').addEventListener('click', function () {
-    menuBase = new Date(menuBase.getFullYear(), menuBase.getMonth(), menuBase.getDate() + 7);
-    renderMenu();
+
+  $('dayDots').addEventListener('click', function (e) {
+    var t = e.target;
+    while (t && t !== this && !(t.classList && t.classList.contains('daydot'))) t = t.parentNode;
+    if (t && t.classList && t.classList.contains('daydot')) setDay(7 + parseInt(t.getAttribute('data-i'), 10), true);
   });
+
+  $('prevWeek').addEventListener('click', function () { goDay(-1); });
+  $('nextWeek').addEventListener('click', function () { goDay(1); });
   $('weekDate').addEventListener('change', function () {
-    try { menuBase = A.parseDate(val('weekDate')); renderMenu(); } catch (e) { renderMenu(); }
+    try {
+      var d = A.parseDate(val('weekDate'));
+      weekStart = mondayOf(d);
+      trackIdx = 7 + Math.round((d - new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate())) / DAY_MS);
+      renderMenu();
+    } catch (e) {
+      highlightDay();
+    }
   });
   $('thisWeek').addEventListener('click', function () {
-    menuBase = new Date();
+    var today = new Date();
+    weekStart = mondayOf(today);
+    trackIdx = 7 + (today.getDay() + 6) % 7;
     renderMenu();
   });
 
@@ -671,7 +822,12 @@
 
   // ---------- старт ----------
   $('days').value = '1-3';
-  menuBase = readSavedWeek();
+  // при открытии: сегодняшний день, если он в сохранённой неделе, иначе понедельник
+  weekStart = mondayOf(readSavedWeek());
+  var t0 = new Date();
+  var wi = Math.round((new Date(t0.getFullYear(), t0.getMonth(), t0.getDate()) -
+                       new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate())) / DAY_MS);
+  trackIdx = (wi >= 0 && wi <= 6) ? 7 + wi : 7;
   restoreOrder();
   renderMenu();
 })();
