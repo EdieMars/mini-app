@@ -172,7 +172,11 @@
     will-change: transform;
   }
   /* на время перетаскивания плавность выключается, иначе палец «плывёт» */
-  .daytrack .daycard { flex: 0 0 100%; min-width: 0; box-shadow: 0 3px 12px rgba(0,0,0,.12); }
+  .daytrack .daycard {
+    flex: 0 0 100%; min-width: 0; box-shadow: 0 3px 12px rgba(0,0,0,.12);
+    /* чтобы iOS при свайпе по тексту не начинал выделение вместо прокрутки */
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
   .daydots { display: flex; justify-content: center; align-items: center; gap: 9px; margin: 2px 0 4px; min-height: 14px; }
   .daydot {
     width: 8px; height: 8px; padding: 0; border: none; border-radius: 50%;
