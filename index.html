@@ -49,6 +49,10 @@
     .item.closed { opacity:.45; }
     .item.closed .qty { text-decoration:line-through; }
     @media (max-width: 420px) { .item-stock { width:58px; height:30px; font-size:12px; } .item-name { font-size:13px; } }
+    .past-hint { background:#fff8e4; border:1px solid #e6d6a6; border-radius:8px; padding:10px 12px; margin:0 0 12px; font-size:13px; line-height:1.45; color:#5b4a1f; }
+    .past-hint b { color:#4a3a12; }
+    .past-hint .mini { margin-left:6px; padding:5px 10px; border:1px solid #b99f5f; border-radius:6px; background:#fffdf6; color:#4a3a12; font:inherit; font-size:12px; cursor:pointer; }
+    .past-hint .mini:hover { background:#fff; }
     .qty { white-space:nowrap; color:var(--green); font-weight:750; font-variant-numeric:tabular-nums; }
     .total { color:var(--muted); font-size:12px; padding-top:11px; }
     .total b { color:var(--ink); font-size:17px; font-weight:750; font-variant-numeric:tabular-nums; }
@@ -101,7 +105,7 @@
         <button class="primary" id="calculate">Рассчитать заказ</button>
         <div class="actions no-print"><button class="action" id="reset">Очистить поля</button></div>
         <div id="error" class="error hidden" role="alert"></div>
-        <div id="output" class="hidden"><div class="result-head" id="resultHead"></div><div id="resultList"></div><div class="total" id="resultTotal"></div><div class="actions no-print"><button class="action" id="copy">Скопировать</button><button class="action" id="print">Печать / PDF</button></div></div>
+        <div id="output" class="hidden"><div id="pastHint" class="past-hint hidden"></div><div class="result-head" id="resultHead"></div><div id="resultList"></div><div class="total" id="resultTotal"></div><div class="actions no-print"><button class="action" id="copy">Скопировать</button><button class="action" id="print">Печать / PDF</button></div></div>
       </section>
       <section id="screen-menu" class="hidden"><h1>Меню</h1><p class="lead">Листай по дням или перейди к нужной дате.</p><div class="toolbar"><button class="iconbtn" id="prev" aria-label="Предыдущий день">‹</button><input id="weekDate" aria-label="Дата меню" inputmode="numeric"><button class="iconbtn" id="next" aria-label="Следующий день">›</button><button class="iconbtn today" id="today">Сегодня</button></div><div id="menuDay"></div><div class="day-pager"><div class="dots" id="dots"></div></div></section>
       <section id="screen-cards" class="hidden"><h1>Техкарты</h1><p class="lead">Найди блюдо и пересчитай ингредиенты на нужное число порций.</p><div class="searchbar"><input id="cardQuery" placeholder="Например, куриная котлета"><button class="action" id="search">Найти</button></div><div id="cardNote" class="hint"></div><div id="cardCats"></div><div id="cardList"></div><div id="cardDetail" class="hidden"></div></section>
@@ -115,14 +119,15 @@
     'use strict';
     var A=window.APP,D=window.DATA,tg=window.Telegram&&window.Telegram.WebApp;
     if(tg){tg.ready();tg.expand();}
-    var $=function(id){return document.getElementById(id);}, mode='date', resultText='', curDay=new Date(), card=null, stock={}, lastRaw={}, headLabel='', headMeals='', headReserve=0;
+    var $=function(id){return document.getElementById(id);}, mode='date', resultText='', curDay=new Date(), card=null, stock={}, lastRaw={}, headLabel='', headMeals='', headReserve=0, pastDates=[];
     var store='kitchen.v2.order', weekStore='kitchen.v2.date';
+    var today0=(function(){var d=new Date();d.setHours(0,0,0,0);return d;})();
     function value(id){return ($(id).value||'').trim();}
     function number(id){var n=parseInt(value(id)||'0',10);return isFinite(n)?n:0;}
     function switchMode(next){mode=next;$('modeDate').classList.toggle('active',mode==='date');$('modeCycle').classList.toggle('active',mode==='cycle');$('dateFields').classList.toggle('hidden',mode!=='date');$('cycleFields').classList.toggle('hidden',mode!=='cycle');save();}
     function save(){try{localStorage.setItem(store,JSON.stringify({mode:mode,from:value('from'),to:value('to'),days:value('days'),b:value('b'),l:value('l'),d:value('d'),reserve:value('reserve'),stock:stock}));}catch(e){}}
     function restore(){var s;try{s=JSON.parse(localStorage.getItem(store)||'null');}catch(e){}if(s){['from','to','days','b','l','d','reserve'].forEach(function(k){if(typeof s[k]==='string')$(k).value=s[k];});if(s.stock&&typeof s.stock==='object')stock=s.stock;switchMode(s.mode==='cycle'?'cycle':'date');}else clearFields();}
-    function clearFields(){['from','to','days','b','l','d','reserve'].forEach(function(k){$(k).value='';});stock={};lastRaw={};$('output').classList.add('hidden');$('error').classList.add('hidden');resultText='';switchMode('date');save();}
+    function clearFields(){['from','to','days','b','l','d','reserve'].forEach(function(k){$(k).value='';});stock={};lastRaw={};pastDates=[];$('output').classList.add('hidden');$('error').classList.add('hidden');resultText='';switchMode('date');save();}
     $('modeDate').onclick=function(){switchMode('date');};$('modeCycle').onclick=function(){switchMode('cycle');};
     function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
     function stockOf(name){var v=stock[name];return (typeof v==='number'&&isFinite(v)&&v>0)?v:0;}
@@ -136,9 +141,14 @@
           if(!value('from'))throw Error('Укажи даты заказа: с какого и по какое число');
           var f=A.parseDate(value('from')),t=A.parseDate(value('to')||value('from'));
           days=A.datesToDays(f,t);label=A.fmtDate(f)+(value('to')?' – '+A.fmtDate(t):'');
+          pastDates=[];
+          for(var pd=new Date(f.getFullYear(),f.getMonth(),f.getDate());pd<=t;pd=new Date(pd.getFullYear(),pd.getMonth(),pd.getDate()+1)){
+            if(pd<today0)pastDates.push(new Date(pd));
+          }
         }else{
           days=A.parseDays(value('days'));label=A.daysLabel(days);
           if(!days.length)throw Error('Укажи дни меню, например 1-3');
+          pastDates=[];
         }
         if(reserve<0)throw Error('Запас не может быть отрицательным');
         if(!people['Завтрак']&&!people['Обед']&&!people['Ужин'])throw Error('Укажи число человек хотя бы для одного приёма пищи');
@@ -147,6 +157,7 @@
         headLabel=label;headReserve=reserve;
         headMeals=Object.keys(people).filter(function(k){return people[k]>0;}).map(function(k){return k.toLowerCase()+' '+people[k];}).join(' · ');
         renderOrder();
+        showPastHint();
         $('output').classList.remove('hidden');
         $('error').classList.add('hidden');
       }catch(e){
@@ -205,6 +216,32 @@
       resultText=lines.join('\n').replace(/\n+$/,'')+'\n';
       $('resultTotal').innerHTML='<b>'+used+'</b> '+plural(used,'позиция','позиции','позиций')+(closed?' · закрыто остатком: '+closed:'');
       save();
+    }
+    // Подсказка о днях периода, которые по календарю уже позади. Числа сама не меняет:
+    // кухня готовит заготовки заранее, поэтому «прошёл по календарю» не значит «уже отдали».
+    function showPastHint(){
+      var el=$('pastHint');
+      if(!el)return;
+      if(!pastDates.length){el.classList.add('hidden');el.innerHTML='';return;}
+      var list=pastDates.map(function(d){return A.fmtDate(d).slice(0,5);});
+      var txt=list.length<=4?list.join(', '):list.slice(0,4).join(', ')+' … '+list[list.length-1];
+      el.innerHTML='<b>'+pastDates.length+' '+plural(pastDates.length,'день','дня','дней')+' в периоде уже позади</b> ('+txt+'). '
+        +'Если готовите заготовки заранее и эти дни ещё не отдали — ничего менять не нужно. '
+        +'Если уже отдали, начните заказ с сегодняшнего дня.'
+        +'<button class="mini" id="startToday" type="button">Считать с '+A.fmtDate(today0).slice(0,5)+'</button>';
+      el.classList.remove('hidden');
+      var b=$('startToday');
+      if(b)b.onclick=function(){
+        var todayStr=A.fmtDate(today0).slice(0,5);
+        $('from').value=todayStr;
+        var tv=value('to');
+        if(tv){
+          var td=A.parseDate(tv);
+          if(td<today0)$('to').value=todayStr;
+        }
+        calculate();
+        save();
+      };
     }
     $('calculate').onclick=calculate;$('reset').onclick=clearFields;
     ['from','to','days','b','l','d','reserve'].forEach(function(id){$(id).addEventListener('input',save);});
