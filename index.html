@@ -44,6 +44,11 @@
     .group.collapsed .group-head::after { content:'▸'; }
     .group.collapsed .group-body { display:none; }
     .item { display:flex; justify-content:space-between; gap:12px; padding:9px 2px; border-bottom:1px solid #e8ece8; font-size:14px; }
+    .item-name { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+    .item-stock { width:76px; flex:0 0 auto; height:34px; padding:0 6px; border:1px solid var(--line); border-radius:4px; background:var(--paper); color:inherit; font:inherit; font-size:13px; text-align:center; }
+    .item.closed { opacity:.45; }
+    .item.closed .qty { text-decoration:line-through; }
+    @media (max-width: 420px) { .item-stock { width:58px; height:30px; font-size:12px; } .item-name { font-size:13px; } }
     .qty { white-space:nowrap; color:var(--green); font-weight:750; font-variant-numeric:tabular-nums; }
     .total { color:var(--muted); font-size:12px; padding-top:11px; }
     .total b { color:var(--ink); font-size:17px; font-weight:750; font-variant-numeric:tabular-nums; }
@@ -110,16 +115,97 @@
     'use strict';
     var A=window.APP,D=window.DATA,tg=window.Telegram&&window.Telegram.WebApp;
     if(tg){tg.ready();tg.expand();}
-    var $=function(id){return document.getElementById(id);}, mode='date', resultText='', curDay=new Date(), card=null;
+    var $=function(id){return document.getElementById(id);}, mode='date', resultText='', curDay=new Date(), card=null, stock={}, lastRaw={}, headLabel='', headMeals='', headReserve=0;
     var store='kitchen.v2.order', weekStore='kitchen.v2.date';
     function value(id){return ($(id).value||'').trim();}
     function number(id){var n=parseInt(value(id)||'0',10);return isFinite(n)?n:0;}
     function switchMode(next){mode=next;$('modeDate').classList.toggle('active',mode==='date');$('modeCycle').classList.toggle('active',mode==='cycle');$('dateFields').classList.toggle('hidden',mode!=='date');$('cycleFields').classList.toggle('hidden',mode!=='cycle');save();}
-    function save(){try{localStorage.setItem(store,JSON.stringify({mode:mode,from:value('from'),to:value('to'),days:value('days'),b:value('b'),l:value('l'),d:value('d'),reserve:value('reserve')}));}catch(e){}}
-    function restore(){var s;try{s=JSON.parse(localStorage.getItem(store)||'null');}catch(e){}if(s){['from','to','days','b','l','d','reserve'].forEach(function(k){if(typeof s[k]==='string')$(k).value=s[k];});switchMode(s.mode==='cycle'?'cycle':'date');}else clearFields();}
-    function clearFields(){['from','to','days','b','l','d','reserve'].forEach(function(k){$(k).value='';});$('output').classList.add('hidden');$('error').classList.add('hidden');resultText='';switchMode('date');save();}
+    function save(){try{localStorage.setItem(store,JSON.stringify({mode:mode,from:value('from'),to:value('to'),days:value('days'),b:value('b'),l:value('l'),d:value('d'),reserve:value('reserve'),stock:stock}));}catch(e){}}
+    function restore(){var s;try{s=JSON.parse(localStorage.getItem(store)||'null');}catch(e){}if(s){['from','to','days','b','l','d','reserve'].forEach(function(k){if(typeof s[k]==='string')$(k).value=s[k];});if(s.stock&&typeof s.stock==='object')stock=s.stock;switchMode(s.mode==='cycle'?'cycle':'date');}else clearFields();}
+    function clearFields(){['from','to','days','b','l','d','reserve'].forEach(function(k){$(k).value='';});stock={};lastRaw={};$('output').classList.add('hidden');$('error').classList.add('hidden');resultText='';switchMode('date');save();}
     $('modeDate').onclick=function(){switchMode('date');};$('modeCycle').onclick=function(){switchMode('cycle');};
-    function calculate(){var days,label,people={'Завтрак':number('b'),'Обед':number('l'),'Ужин':number('d')},reserve=number('reserve');try{if(mode==='date'){if(!value('from'))throw Error('Укажи даты заказа: с какого и по какое число');var f=A.parseDate(value('from')),t=A.parseDate(value('to')||value('from'));days=A.datesToDays(f,t);label=A.fmtDate(f)+(value('to')?' – '+A.fmtDate(t):'');}else{days=A.parseDays(value('days'));label=A.daysLabel(days);if(!days.length)throw Error('Укажи дни меню, например 1-3');}if(reserve<0)throw Error('Запас не может быть отрицательным');if(!people['Завтрак']&&!people['Обед']&&!people['Ужин'])throw Error('Укажи число человек хотя бы для одного приёма пищи');var items=A.calc(D.menu,D.recipes,days,people,reserve),grouped=A.groupOrder(items,D.categories,D.units);if(!grouped.used)throw Error('Заказ пустой. Проверь период и число человек.');var meals=Object.keys(people).filter(function(k){return people[k]>0;}).map(function(k){return k.toLowerCase()+' '+people[k];}).join(' · ');$('resultHead').innerHTML='<strong>Заказ на '+label+'</strong>'+meals+(reserve?' · запас '+reserve:'');var html='',text='Заказ на '+label+'\nЛюди: '+meals+(reserve?' + запас '+reserve:'')+'\n\n';grouped.groups.forEach(function(g){html+='<section class="group"><button class="group-head" aria-expanded="true"><span>'+g.title+'</span><span class="group-count">'+g.items.length+'</span></button><div class="group-body">';text+=g.title+'\n';g.items.forEach(function(i){html+='<div class="item"><span>'+i.name+'</span><span class="qty">'+i.qty+' '+i.unit+'</span></div>';text+='  '+i.name+' — '+i.qty+' '+i.unit+'\n';});html+='</div></section>';text+='\n';});$('resultList').innerHTML=html;Array.prototype.forEach.call($('resultList').querySelectorAll('.group-head'),function(b){b.onclick=function(){var s=b.parentNode;s.classList.toggle('collapsed');b.setAttribute('aria-expanded',s.classList.contains('collapsed')?'false':'true');};});$('resultTotal').innerHTML='<b>'+grouped.used+'</b> '+plural(grouped.used,'позиция','позиции','позиций');$('output').classList.remove('hidden');$('error').classList.add('hidden');resultText=text+'Позиций: '+grouped.used;save();}catch(e){$('output').classList.add('hidden');$('error').textContent=e.message;$('error').classList.remove('hidden');}}
+    function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+    function stockOf(name){var v=stock[name];return (typeof v==='number'&&isFinite(v)&&v>0)?v:0;}
+    function parseStockRaw(v){var n=parseFloat(String(v==null?'':v).replace(',','.'));if(!isFinite(n)||n<0)n=0;return n;}
+    // сколько надо заказать: «сырое» минус то, что уже есть, и только потом округление вверх
+    function qtyOf(name){var q=Math.ceil((lastRaw[name]||0)-stockOf(name)-1e-9);return q>0?q:0;}
+    function calculate(){
+      var days,label,people={'Завтрак':number('b'),'Обед':number('l'),'Ужин':number('d')},reserve=number('reserve');
+      try{
+        if(mode==='date'){
+          if(!value('from'))throw Error('Укажи даты заказа: с какого и по какое число');
+          var f=A.parseDate(value('from')),t=A.parseDate(value('to')||value('from'));
+          days=A.datesToDays(f,t);label=A.fmtDate(f)+(value('to')?' – '+A.fmtDate(t):'');
+        }else{
+          days=A.parseDays(value('days'));label=A.daysLabel(days);
+          if(!days.length)throw Error('Укажи дни меню, например 1-3');
+        }
+        if(reserve<0)throw Error('Запас не может быть отрицательным');
+        if(!people['Завтрак']&&!people['Обед']&&!people['Ужин'])throw Error('Укажи число человек хотя бы для одного приёма пищи');
+        lastRaw=A.calcRaw(D.menu,D.recipes,days,people,reserve);
+        if(!Object.keys(lastRaw).length)throw Error('Заказ пустой. Проверь период и число человек.');
+        headLabel=label;headReserve=reserve;
+        headMeals=Object.keys(people).filter(function(k){return people[k]>0;}).map(function(k){return k.toLowerCase()+' '+people[k];}).join(' · ');
+        renderOrder();
+        $('output').classList.remove('hidden');
+        $('error').classList.add('hidden');
+      }catch(e){
+        $('error').classList.remove('hidden');$('error').textContent='Ошибка: '+e.message;
+        $('output').classList.add('hidden');
+      }
+    }
+    function renderOrder(){
+      var groups=A.groupOrder(lastRaw,D.categories,D.units),html='';
+      $('resultHead').innerHTML='<strong>Заказ на '+esc(headLabel)+'</strong>'+esc(headMeals)+(headReserve?' · запас '+headReserve:'');
+      groups.groups.forEach(function(g){
+        html+='<section class="group"><button class="group-head" aria-expanded="true"><span>'+esc(g.title)+'</span><span class="group-count">'+g.items.length+'</span></button><div class="group-body">';
+        g.items.forEach(function(i){
+          var name=String(i.name),unit=String(i.unit||''),have=stockOf(name);
+          html+='<div class="item" data-product="'+esc(name)+'" data-unit="'+esc(unit)+'">'+
+            '<span class="item-name">'+esc(name)+'</span>'+
+            '<span class="qty" data-role="qty">'+qtyOf(name)+' '+esc(unit)+'</span>'+
+            '<input type="text" class="item-stock" inputmode="decimal" autocomplete="off" value="'+(have>0?have:'')+'" placeholder="есть" aria-label="остаток: '+esc(name)+'">'+
+            '</div>';
+        });
+        html+='</div></section>';
+      });
+      $('resultList').innerHTML=html;
+      Array.prototype.forEach.call($('resultList').querySelectorAll('.group-head'),function(b){
+        b.onclick=function(){var s=b.parentNode;s.classList.toggle('collapsed');b.setAttribute('aria-expanded',s.classList.contains('collapsed')?'false':'true');};
+      });
+      Array.prototype.forEach.call($('resultList').querySelectorAll('.item-stock'),function(inp){
+        var onType=function(){
+          var row=this.parentNode,name=row.getAttribute('data-product'),n=parseStockRaw(this.value);
+          if(n>0)stock[name]=n;else delete stock[name];
+          refreshOrder();
+        };
+        inp.addEventListener('input',onType,false);
+        inp.addEventListener('change',onType,false);
+      });
+      refreshOrder();
+    }
+    // пересчитывает видимые числа, итог и текст для копирования — без перерисовки строк (фокус не теряется)
+    function refreshOrder(){
+      var used=0,closed=0,lines=[];
+      lines.push('Заказ на '+headLabel);
+      lines.push('Люди: '+headMeals+(headReserve?' + запас '+headReserve:''));
+      lines.push('');
+      Array.prototype.forEach.call($('resultList').querySelectorAll('section.group'),function(sec){
+        var head=sec.querySelector('.group-head span'),title=head?head.textContent:'',rows=[];
+        Array.prototype.forEach.call(sec.querySelectorAll('.item'),function(row){
+          var name=row.getAttribute('data-product'),unit=row.getAttribute('data-unit'),q=qtyOf(name);
+          var el=row.querySelector('[data-role="qty"]');
+          if(el)el.textContent=q+' '+unit;
+          row.classList.toggle('closed',q<=0);
+          if(q>0){used++;rows.push('  '+name+' — '+q+' '+unit);}
+          else if(stockOf(name)>0){closed++;}
+        });
+        if(rows.length){lines.push(title);lines.push.apply(lines,rows);lines.push('');}
+      });
+      resultText=lines.join('\n').replace(/\n+$/,'')+'\n';
+      $('resultTotal').innerHTML='<b>'+used+'</b> '+plural(used,'позиция','позиции','позиций')+(closed?' · закрыто остатком: '+closed:'');
+      save();
+    }
     $('calculate').onclick=calculate;$('reset').onclick=clearFields;
     ['from','to','days','b','l','d','reserve'].forEach(function(id){$(id).addEventListener('input',save);});
     function b64url(s){var bytes=new TextEncoder().encode(s),bin='',i;for(i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
