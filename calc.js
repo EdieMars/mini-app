@@ -17,8 +17,16 @@
   }
 
   // '15-17' -> [15,16,17]; '28-3' -> [28,1,2,3]
+  // понимает и «с 15 по 17», и «15..17», и «15 – 17», как бот
   function parseDays(text) {
-    var t = String(text).replace(/[–—]/g, '-').trim();
+    var t = String(text == null ? '' : text).toLowerCase()
+      .replace(/[–—]/g, '-')
+      .replace(/\s*\.\s*\.\s*/g, '-')      // 15..17
+      .replace(/^дни\s*:?\s*/, '')
+      .replace(/\s+по\s+/g, '-')
+      .replace(/^с\s+/, '')
+      .replace(/\s*-\s*/g, '-')
+      .trim();
     var days = [];
     var parts = t.split(/[,\s]+/);
     for (var i = 0; i < parts.length; i++) {
@@ -47,12 +55,13 @@
 
   // Сумма продуктов БЕЗ округления — для вычета остатков
   function calcRaw(rows, recipes, days, people, reserve) {
+    reserve = reserve || 0;              // без этого n += undefined даёт NaN и пустой заказ
     var daySet = {};
     for (var i = 0; i < days.length; i++) daySet[days[i]] = 1;
     var perDay = false;
     for (var key in people) { if (/^\d+$/.test(key)) { perDay = true; break; } }
 
-    var total = {};
+    var total = {}, missing = [];
     for (var r = 0; r < rows.length; r++) {
       var row = rows[r];
       if (!daySet[row.day_no]) continue;
@@ -61,12 +70,22 @@
       if (!(n > 0)) continue;
       n += reserve;
       var recipe = recipes[norm(row.dish)];
-      if (!recipe) throw new Error('Нет рецептуры для «' + row.dish + '»');
+      if (!recipe) { missing.push({ day: row.day_no, dish: row.dish }); continue; }
       var ing = recipe.ingredients;
       for (var j = 0; j < ing.length; j++) {
         var it = ing[j];
         total[it.product] = (total[it.product] || 0) + it.qty * n;
       }
+    }
+    if (missing.length) {
+      var names = [], seen = {}, dayList = [], daySeen = {};
+      missing.forEach(function (m) {
+        if (!seen[m.dish]) { seen[m.dish] = 1; names.push(m.dish); }
+        if (!daySeen[m.day]) { daySeen[m.day] = 1; dayList.push(m.day); }
+      });
+      dayList.sort(function (a, b) { return a - b; });
+      throw new Error('Нет рецептуры: ' + names.join(', ') +
+                      ' (дни: ' + daysLabel(dayList) + ')');
     }
     var clean = {};
     for (var p in total) { if (total[p] > 0) clean[p] = total[p]; }
