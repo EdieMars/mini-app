@@ -35,13 +35,13 @@
       var m = p.match(/^(\d+)\s*-\s*(\d+)$/);
       if (m) {
         var a = parseInt(m[1], 10), b = parseInt(m[2], 10);
-        if (a < 1 || a > 28 || b < 1 || b > 28) throw new Error('День вне 1–28: ' + p);
+        if (a < 1 || a > 28 || b < 1 || b > 28) throw new Error('День вне 1–28: ' + p + '. В цикле 28 дней — пиши, например, 1-3 или 1,3,5');
         if (a <= b) { for (var d = a; d <= b; d++) days.push(d); }
         else { for (var x = a; x <= 28; x++) days.push(x); for (var y = 1; y <= b; y++) days.push(y); }
       } else {
-        if (!/^\d+$/.test(p)) throw new Error('«' + p + '» — не день (нужно 1–28)');
+        if (!/^\d+$/.test(p)) throw new Error('«' + p + '» — не день. Нужны числа 1–28: например 1-3 или 1,3,5');
         var n = parseInt(p, 10);
-        if (n < 1 || n > 28) throw new Error('День вне 1–28: ' + p);
+        if (n < 1 || n > 28) throw new Error('День вне 1–28: ' + p + '. В цикле 28 дней — пиши, например, 1-3 или 1,3,5');
         days.push(n);
       }
     }

@@ -98,17 +98,17 @@
         <h1>Заказ продуктов</h1><p class="lead">Выбери период и укажи число человек на каждый приём пищи.</p>
         <div class="switch no-print"><button id="modeDate" class="active">По датам</button><button id="modeCycle">Дни цикла</button></div>
         <div class="order-grid">
-          <div class="section" id="dateFields"><div class="section-title">Период</div><div class="row"><div class="field"><label for="from">С какого числа</label><input id="from" inputmode="numeric"></div><div class="field"><label for="to">По какое число</label><input id="to" inputmode="numeric"></div></div><p id="dateHint" class="hint">Вводи, например, 16.11 или 1611</p></div>
-          <div class="section hidden" id="cycleFields"><div class="section-title">Дни меню</div><div class="field"><label for="days">Дни: диапазон или через запятую, например 1-3</label><input id="days" inputmode="numeric"></div><p class="hint">В цикле 28 дней</p></div>
-          <div class="section"><div class="section-title">Человек по приёмам пищи</div><div class="row"><div class="field person-field"><label for="b">Завтрак</label><input id="b" inputmode="numeric"></div><div class="field person-field"><label for="l">Обед</label><input id="l" inputmode="numeric"></div><div class="field person-field"><label for="d">Ужин</label><input id="d" inputmode="numeric"></div></div></div>
-          <div class="section"><div class="reserve-row"><div><div class="section-title" style="margin:0">Запас</div><div class="hint" style="margin:2px 0 0">Добавляется к каждому числу</div></div><input id="reserve" inputmode="numeric" aria-label="Запас"></div></div>
+          <div class="section" id="dateFields"><div class="section-title">Период</div><div class="row"><div class="field"><label for="from">С какого числа</label><input id="from"></div><div class="field"><label for="to">По какое число</label><input id="to"></div></div><p id="dateHint" class="hint">Вводи, например, 16.11 или 1611</p></div>
+          <div class="section hidden" id="cycleFields"><div class="section-title">Дни меню</div><div class="field"><label for="days">Дни: диапазон или через запятую, например 1-3</label><input id="days"></div><p class="hint">В цикле 28 дней</p></div>
+          <div class="section"><div class="section-title">Человек по приёмам пищи</div><div class="row"><div class="field person-field"><label for="b">Завтрак</label><input id="b"></div><div class="field person-field"><label for="l">Обед</label><input id="l"></div><div class="field person-field"><label for="d">Ужин</label><input id="d"></div></div></div>
+          <div class="section"><div class="reserve-row"><div><div class="section-title" style="margin:0">Запас</div><div class="hint" style="margin:2px 0 0">Добавляется к каждому числу</div></div><input id="reserve" aria-label="Запас"></div></div>
         </div>
         <button class="primary" id="calculate">Рассчитать заказ</button>
         <div class="actions no-print"><button class="action" id="reset">Очистить поля</button></div>
         <div id="error" class="error hidden" role="alert"></div>
         <div id="output" class="hidden"><div id="pastHint" class="past-hint hidden"></div><div class="result-head" id="resultHead"></div><div id="resultList"></div><div class="total" id="resultTotal"></div><div class="actions no-print"><button class="action" id="copy">Скопировать</button><button class="action" id="print">Печать / PDF</button></div></div>
       </section>
-      <section id="screen-menu" class="hidden"><h1>Меню</h1><p class="lead">Листай по дням или перейди к нужной дате.</p><div class="toolbar"><button class="iconbtn" id="prev" aria-label="Предыдущий день">‹</button><input id="weekDate" aria-label="Дата меню" inputmode="numeric"><button class="iconbtn" id="next" aria-label="Следующий день">›</button><button class="iconbtn today" id="today">Сегодня</button></div><div id="menuDay"></div><div class="day-pager"><div class="dots" id="dots"></div></div></section>
+      <section id="screen-menu" class="hidden"><h1>Меню</h1><p class="lead">Листай по дням или перейди к нужной дате.</p><div class="toolbar"><button class="iconbtn" id="prev" aria-label="Предыдущий день">‹</button><input id="weekDate" aria-label="Дата меню"><button class="iconbtn" id="next" aria-label="Следующий день">›</button><button class="iconbtn today" id="today">Сегодня</button></div><p id="menuErr" class="error hidden" role="alert"></p><div id="menuDay"></div><div class="day-pager"><div class="dots" id="dots"></div></div></section>
       <section id="screen-cards" class="hidden"><h1>Техкарты</h1><p class="lead">Найди блюдо и пересчитай ингредиенты на нужное число порций.</p><div class="searchbar"><input id="cardQuery" placeholder="Например, куриная котлета"><button class="action" id="search">Найти</button></div><div id="cardNote" class="hint"></div><div id="cardCats"></div><div id="cardList"></div><div id="cardDetail" class="hidden"></div></section>
     </main>
   </div>
@@ -125,6 +125,15 @@
     var today0=(function(){var d=new Date();d.setHours(0,0,0,0);return d;})();
     function value(id){return ($(id).value||'').trim();}
     function number(id){var n=parseInt(value(id)||'0',10);return isFinite(n)?n:0;}
+    // число из поля: пусто = 0, а вот «сорок» и «-5» — понятная ошибка, а не молчаливый 0
+    function numStrict(id,label){
+      var raw=value(id);
+      if(!raw)return 0;
+      var t=raw.replace(/\s+/g,'');
+      if(/^[-\u2212]/.test(t))throw Error(label+': «'+raw+'» — минус не нужен, пиши просто число');
+      if(!/^\d+$/.test(t))throw Error(label+': «'+raw+'» — это не число. Пиши цифрами, например 40');
+      return parseInt(t,10);
+    }
     function switchMode(next){mode=next;$('modeDate').classList.toggle('active',mode==='date');$('modeCycle').classList.toggle('active',mode==='cycle');$('dateFields').classList.toggle('hidden',mode!=='date');$('cycleFields').classList.toggle('hidden',mode!=='cycle');save();}
     function save(){try{localStorage.setItem(store,JSON.stringify({mode:mode,from:value('from'),to:value('to'),days:value('days'),b:value('b'),l:value('l'),d:value('d'),reserve:value('reserve'),stock:stock}));}catch(e){}}
     function restore(){var s;try{s=JSON.parse(localStorage.getItem(store)||'null');}catch(e){}if(s){['from','to','days','b','l','d','reserve'].forEach(function(k){if(typeof s[k]==='string')$(k).value=s[k];});if(s.stock&&typeof s.stock==='object')stock=s.stock;switchMode(s.mode==='cycle'?'cycle':'date');}else clearFields();}
@@ -136,8 +145,10 @@
     // сколько надо заказать: «сырое» минус то, что уже есть, и только потом округление вверх
     function qtyOf(name){var have=Math.floor(stockOf(name));var q=Math.ceil((lastRaw[name]||0)-have-1e-9);return q>0?q:0;}
     function calculate(){
-      var days,label,people={'Завтрак':number('b'),'Обед':number('l'),'Ужин':number('d')},reserve=number('reserve');
+      var days,label,people,reserve;
       try{
+        people={'Завтрак':numStrict('b','Завтрак'),'Обед':numStrict('l','Обед'),'Ужин':numStrict('d','Ужин')};
+        reserve=numStrict('reserve','Запас');
         if(mode==='date'){
           if(!value('from'))throw Error('Укажи даты заказа: с какого и по какое число');
           var f=A.parseDate(value('from')),t=A.parseDate(value('to')||value('from'));
@@ -335,12 +346,23 @@
       return same?parts.join(' / ')+' '+units[0]:parts.map(function(p,i){return p+' '+units[i];}).join(' / ');
     }
     function renderMenu(){var week=A.weekDays(curDay),hit=week.filter(function(x){return x.date.getDate()===curDay.getDate()&&x.date.getMonth()===curDay.getMonth()&&x.date.getFullYear()===curDay.getFullYear();})[0];if(!hit){curDay=monday(curDay);week=A.weekDays(curDay);hit=week[0];}var day=hit.day,today=new Date(),meals=['Завтрак','Обед','Ужин'],shown=0,html='<article class="day-panel"><div class="day-title">'+hit.name+', '+fmt(curDay)+' <small>· день '+day+(fmt(today)===fmt(curDay)?' · сегодня':'')+'</small></div>';meals.forEach(function(m){var rows=D.menu.filter(function(r){return r.day_no===day&&r.meal===m;});if(rows.length){html+='<section class="meal"><h3>'+m+'</h3>';rows.forEach(function(r){shown++;html+='<div class="dish"><span class="name">'+r.dish+'</span>'+(r.out?'<span class="out">'+outFull(r)+'</span>':'')+'</div>';});html+='</section>';}});$('menuDay').innerHTML=(shown?html+'</article>':'<article class="day-panel"><div class="day-title">'+hit.name+', '+fmt(curDay)+'</div><p class="hint">На этот день меню нет. Проверь дату: цикл идёт с 16.11.2026, день 1.</p></article>');$('weekDate').value=fmt(curDay);var wd=(curDay.getDay()+6)%7,dots='';for(var i=0;i<7;i++)dots+='<button class="dot '+(i===wd?'active':'')+'" data-day="'+i+'" aria-label="День '+(i+1)+'"></button>';$('dots').innerHTML=dots;Array.prototype.forEach.call($('dots').children,function(b){b.onclick=function(){curDay=shift(monday(curDay),parseInt(b.getAttribute('data-day'),10));renderMenu();};});try{localStorage.setItem(weekStore,curDay.toISOString());}catch(e){}}
-    $('prev').onclick=function(){curDay=shift(curDay,-1);renderMenu();};$('next').onclick=function(){curDay=shift(curDay,1);renderMenu();};$('today').onclick=function(){curDay=new Date();renderMenu();};$('weekDate').onchange=function(){try{curDay=A.parseDate(value('weekDate'));renderMenu();}catch(e){$('weekDate').value=fmt(curDay);}};
+    $('prev').onclick=function(){curDay=shift(curDay,-1);renderMenu();};$('next').onclick=function(){curDay=shift(curDay,1);renderMenu();};$('today').onclick=function(){curDay=new Date();renderMenu();};$('weekDate').onchange=function(){
+      var box=$('menuErr');
+      try{curDay=A.parseDate(value('weekDate'));box.classList.add('hidden');box.textContent='';renderMenu();}
+      catch(e){$('weekDate').value=fmt(curDay);box.textContent=e.message;box.classList.remove('hidden');}
+    };
     var colors=['#b45e36','#47866b','#ae8b32','#ad5148','#547a9a','#a36c37','#668057','#39738a'];
     function renderCats(){var html='';D.card_categories.forEach(function(c,i){html+='<button class="category" style="--cat:'+colors[i%colors.length]+'" data-cat="'+i+'">'+c[0]+'</button>';});$('cardCats').innerHTML=html;$('cardCats').classList.remove('hidden');$('cardList').innerHTML='';$('cardList').classList.add('hidden');$('cardDetail').classList.add('hidden');$('cardNote').textContent='';Array.prototype.forEach.call($('cardCats').children,function(b){b.onclick=function(){var i=parseInt(b.getAttribute('data-cat'),10),pages=D.card_categories[i][1];showCards(D.cards.filter(function(c){return pages.indexOf(c.page)>=0;}),D.card_categories[i][0]);};});}
     function showCards(list,title){$('cardCats').classList.add('hidden');$('cardDetail').classList.add('hidden');$('cardList').classList.remove('hidden');$('cardNote').textContent=(list.length?'Найдено: '+list.length:'Ничего не найдено')+(title?' · '+title:'');$('cardList').innerHTML='<button class="action" id="backCats" style="width:100%;margin-bottom:8px">← К разделам</button>'+(list.map(function(c){return '<button class="category" data-page="'+c.page+'">'+c.dish+'</button>';}).join('')||'<p class="hint">Попробуй другое слово: например, «котлета» или «каша».</p>');$('backCats').onclick=renderCats;Array.prototype.forEach.call($('cardList').children,function(b){var pg=b.getAttribute('data-page');if(pg===null)return;b.onclick=function(){openCard(D.cards.filter(function(c){return c.page===parseInt(pg,10);})[0]);};});}
-    function openCard(c){card=c;$('cardList').classList.add('hidden');$('cardDetail').classList.remove('hidden');$('cardDetail').innerHTML='<button class="action" id="backCards">← К списку</button><div class="recipe"><strong>'+c.dish+'</strong><p class="hint">'+(c.output?'Выход: '+outText(c.dish,c.output,c.output_units):'')+'</p><label for="portions">Количество порций</label><div class="row"><input id="portions" inputmode="numeric" placeholder="20"><button class="primary" id="showRecipe" style="max-width:140px">Пересчитать</button></div><div id="recipeOut"></div></div>';$('backCards').onclick=function(){$('cardDetail').classList.add('hidden');$('cardList').classList.remove('hidden');};$('showRecipe').onclick=renderRecipe;$('portions').onkeydown=function(e){if(e.key==='Enter')renderRecipe();};}
-    function renderRecipe(){var n=parseInt($('portions').value,10);if(!(n>0)){$('recipeOut').innerHTML='<p class="error">Укажи число порций больше нуля.</p>';return;}var per=card.per||1,html='';card.ing.forEach(function(i){html+='<div class="item"><span>'+i[0]+'</span><span class="qty">'+A.fmtQty(i[2]*n/per,i[1])+'</span></div>';});$('recipeOut').innerHTML='<div class="divider"></div><strong>На '+n+' порций</strong>'+html;}
+    function openCard(c){card=c;$('cardList').classList.add('hidden');$('cardDetail').classList.remove('hidden');$('cardDetail').innerHTML='<button class="action" id="backCards">← К списку</button><div class="recipe"><strong>'+c.dish+'</strong><p class="hint">'+(c.output?'Выход: '+outText(c.dish,c.output,c.output_units):'')+'</p><label for="portions">Количество порций</label><div class="row"><input id="portions" placeholder="20"><button class="primary" id="showRecipe" style="max-width:140px">Пересчитать</button></div><div id="recipeOut"></div></div>';$('backCards').onclick=function(){$('cardDetail').classList.add('hidden');$('cardList').classList.remove('hidden');};$('showRecipe').onclick=renderRecipe;$('portions').onkeydown=function(e){if(e.key==='Enter')renderRecipe();};}
+    function renderRecipe(){var raw=String($('portions').value||'').trim(),n=0;
+      if(raw){
+        var t=raw.replace(/\s+/g,'');
+        if(/^[-\u2212]/.test(t)){$('recipeOut').innerHTML='<p class="error">Порции: «'+raw+'» — минус не нужен, пиши просто число.</p>';return;}
+        if(!/^\d+$/.test(t)){$('recipeOut').innerHTML='<p class="error">Порции: «'+raw+'» — это не число. Пиши цифрами, например 10.</p>';return;}
+        n=parseInt(t,10);
+      }
+      if(!(n>0)){$('recipeOut').innerHTML='<p class="error">Укажи число порций больше нуля.</p>';return;}var per=card.per||1,html='';card.ing.forEach(function(i){html+='<div class="item"><span>'+i[0]+'</span><span class="qty">'+A.fmtQty(i[2]*n/per,i[1])+'</span></div>';});$('recipeOut').innerHTML='<div class="divider"></div><strong>На '+n+' порций</strong>'+html;}
     $('search').onclick=function(){var q=value('cardQuery');if(!q){$('cardNote').textContent='Введи название блюда.';return;}var found=A.findCards(q,D.cards);if(!found.length){$('cardCats').classList.add('hidden');showCards([], 'Поиск: '+q);return;}showCards(found,'Поиск: '+q);};$('cardQuery').onkeydown=function(e){if(e.key==='Enter')$('search').click();};
     try{var saved=localStorage.getItem(weekStore);if(saved&&!isNaN(new Date(saved).getTime()))curDay=new Date(saved);}catch(e){}
     $('cycleChip').textContent='ЦИКЛ · ДЕНЬ '+A.dateToDay(new Date());restore();renderMenu();
