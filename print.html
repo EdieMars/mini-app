@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Заказ — печать</title>
+<style>
+  html, body { margin:0; background:#fff; color:#111; }
+  body { font: 12px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 14px; }
+  .bar { display:flex; gap:8px; margin:0 0 12px; }
+  .bar button { font: inherit; padding:10px 14px; border:1px solid #c9d1c9; background:#f4f6f2; color:#202925; border-radius:6px; }
+  .hint { color:#758078; font-size:12px; margin:0 0 12px; }
+  pre { white-space:pre-wrap; word-break:break-word; margin:0;
+        font: 12px/1.35 ui-monospace, SFMono-Regular, Consolas, monospace; }
+  @media print {
+    .bar, .hint { display:none !important; }
+    body { padding:0; }
+    pre { font-size: 11.5px; }
+  }
+</style>
+</head>
+<body>
+<div class="bar">
+  <button id="go">Печать / Сохранить в PDF</button>
+  <button id="close">Закрыть</button>
+</div>
+<p class="hint">Если окно печати не открылось — нажми кнопку выше. В окне печати выбери «Сохранить как PDF».</p>
+<pre id="txt">Нет данных для печати — открой эту страницу из приложения, кнопкой «Печать / PDF».</pre>
+<script>
+(function () {
+  'use strict';
+  function unb64(s) {
+    s = s.replace(/-/g, '+').replace(/_/g, '/');
+    var pad = s.length % 4;
+    if (pad) s += '===='.slice(0, 4 - pad);
+    var bin = atob(s), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+  var m = /[#&]d=([^&]+)/.exec(location.hash || '');
+  var box = document.getElementById('txt');
+  if (m) {
+    try { box.textContent = unb64(decodeURIComponent(m[1])); }
+    catch (e) { box.textContent = 'Не смог прочитать заказ. Открой приложение и нажми «Печать / PDF» ещё раз.'; }
+  }
+  document.getElementById('go').onclick = function () { window.print(); };
+  document.getElementById('close').onclick = function () {
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close) window.Telegram.WebApp.close();
+    else window.close();
+  };
+  if (m) setTimeout(function () { try { window.print(); } catch (e) {} }, 400);
+})();
+</script>
+</body>
+</html>
