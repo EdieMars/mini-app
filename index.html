@@ -102,7 +102,7 @@
       <section id="screen-cards" class="hidden"><h1>Техкарты</h1><p class="lead">Найди блюдо и пересчитай ингредиенты на нужное число порций.</p><div class="searchbar"><input id="cardQuery" placeholder="Например, куриная котлета"><button class="action" id="search">Найти</button></div><div id="cardNote" class="hint"></div><div id="cardCats"></div><div id="cardList"></div><div id="cardDetail" class="hidden"></div></section>
     </main>
   </div>
-  <div id="copyBox" class="sheet hidden"><div class="sheet-in"><div class="sheet-title">Заказ — скопируй вручную</div><p class="sheet-hint">Долгое нажатие на текст → «Выделить всё» → «Копировать».</p><textarea id="copyText" readonly></textarea><div class="actions"><button class="action" id="copyClose">Закрыть</button></div></div></div>
+  <div id="copyBox" class="sheet hidden"><div class="sheet-in"><div class="sheet-title">Заказ — скопируй вручную</div><p class="sheet-hint" id="copyHint">Долгое нажатие на текст → «Выделить всё» → «Копировать».</p><textarea id="copyText" readonly></textarea><div class="actions"><button class="action hidden" id="openBot">Открыть бота</button><button class="action" id="copyClose">Закрыть</button></div></div></div>
   <nav class="bottom-nav"><div class="nav"><button class="active" data-screen="order"><span>▤</span>Заказ</button><button data-screen="menu"><span>▦</span>Меню</button><button data-screen="cards"><span>▣</span>Техкарты</button></div></nav>
   <script src="data.js"></script><script src="calc.js"></script>
   <script>
@@ -123,32 +123,51 @@
     $('calculate').onclick=calculate;$('reset').onclick=clearFields;
     ['from','to','days','b','l','d','reserve'].forEach(function(id){$(id).addEventListener('input',save);});
     function b64url(s){var bytes=new TextEncoder().encode(s),bin='',i;for(i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
-    function showCopyBox(text){$('copyText').value=text;$('copyBox').classList.remove('hidden');setTimeout(function(){try{$('copyText').focus();$('copyText').select();}catch(e){}},50);}
+    function copyToClipboard(text,cb){
+      var ok=function(){cb(true);},bad=function(){cb(false);};
+      try{
+        if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(ok,bad);return;}
+      }catch(e){}
+      try{
+        var t=document.createElement('textarea');t.value=text;t.setAttribute('readonly','');
+        document.body.appendChild(t);t.select();t.setSelectionRange(0,t.value.length);
+        var r=document.execCommand('copy');t.remove();cb(!!r);
+      }catch(e){cb(false);}
+    }
+    function showCopyBox(text,hint){
+      $('copyText').value=text;
+      $('copyHint').textContent=hint||'Долгое нажатие на текст → «Выделить всё» → «Копировать».';
+      $('openBot').classList.add('hidden');
+      $('copyBox').classList.remove('hidden');
+      setTimeout(function(){try{$('copyText').focus();$('copyText').select();}catch(e){}},50);
+    }
     $('copyClose').onclick=function(){$('copyBox').classList.add('hidden');};
+    $('openBot').onclick=function(){
+      var tg=window.Telegram&&window.Telegram.WebApp;
+      if(tg&&tg.openTelegramLink)tg.openTelegramLink('https://t.me/zakaz_produktov_bot');
+    };
     $('copy').onclick=function(){
       if(!resultText)return;
-      var done=function(){$('copy').textContent='Скопировано';setTimeout(function(){$('copy').textContent='Скопировать';},1300);};
-      var fallback=function(){
-        var t=document.createElement('textarea');t.value=resultText;t.setAttribute('readonly','');
-        document.body.appendChild(t);
-        var ok=false;
-        try{t.select();t.setSelectionRange(0,t.value.length);ok=document.execCommand('copy');}catch(e){ok=false;}
-        t.remove();
-        if(ok)done();else showCopyBox(resultText);   // не смогли — показываем текст для ручного копирования
-      };
-      try{
-        if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(resultText).then(done,fallback);
-        else fallback();
-      }catch(e){fallback();}
+      copyToClipboard(resultText,function(ok){
+        if(ok){
+          $('copy').textContent='Скопировано';
+          setTimeout(function(){$('copy').textContent='Скопировать';},1300);
+        }else{
+          showCopyBox(resultText,'Скопировать не удалось: выдели текст вручную и нажми «Копировать».');
+        }
+      });
     };
     $('print').onclick=function(){
       if(!resultText)return;
       var tg=window.Telegram&&window.Telegram.WebApp;
-      if(tg&&tg.openLink){
-        // во встроенном браузере Telegram window.print() не работает — открываем системный
-        var url=new URL('print.html',location.href);
-        url.hash='d='+b64url(resultText);
-        tg.openLink(url.toString());
+      if(tg&&tg.openTelegramLink){
+        // во встроенном браузере Telegram печать не работает — PDF собирает бот
+        copyToClipboard(resultText,function(ok){
+          showCopyBox(resultText, ok
+            ? 'Скопировано. Вставь заказ в бот — он пришлёт PDF файлом.'
+            : 'Текст ниже. Скопируй его вручную и пришли в бот — он пришлёт PDF.');
+          $('openBot').classList.remove('hidden');
+        });
         return;
       }
       window.print();
