@@ -49,6 +49,7 @@
     .item.closed { opacity:.45; }
     .item.closed .qty { text-decoration:line-through; }
     @media (max-width: 420px) { .item-stock { width:58px; height:30px; font-size:12px; } .item-name { font-size:13px; } }
+    .stock-note { font-size:11px; color:#8b8578; margin-left:2px; white-space:nowrap; }
     .past-hint { background:#fff8e4; border:1px solid #e6d6a6; border-radius:8px; padding:10px 12px; margin:0 0 12px; font-size:13px; line-height:1.45; color:#5b4a1f; }
     .past-hint b { color:#4a3a12; }
     .past-hint .mini { margin-left:6px; padding:5px 10px; border:1px solid #b99f5f; border-radius:6px; background:#fffdf6; color:#4a3a12; font:inherit; font-size:12px; cursor:pointer; }
@@ -133,7 +134,7 @@
     function stockOf(name){var v=stock[name];return (typeof v==='number'&&isFinite(v)&&v>0)?v:0;}
     function parseStockRaw(v){var n=parseFloat(String(v==null?'':v).replace(',','.'));if(!isFinite(n)||n<0)n=0;return n;}
     // сколько надо заказать: «сырое» минус то, что уже есть, и только потом округление вверх
-    function qtyOf(name){var q=Math.ceil((lastRaw[name]||0)-stockOf(name)-1e-9);return q>0?q:0;}
+    function qtyOf(name){var have=Math.floor(stockOf(name));var q=Math.ceil((lastRaw[name]||0)-have-1e-9);return q>0?q:0;}
     function calculate(){
       var days,label,people={'Завтрак':number('b'),'Обед':number('l'),'Ужин':number('d')},reserve=number('reserve');
       try{
@@ -176,6 +177,7 @@
             '<span class="item-name">'+esc(name)+'</span>'+
             '<span class="qty" data-role="qty">'+qtyOf(name)+' '+esc(unit)+'</span>'+
             '<input type="text" class="item-stock" inputmode="decimal" autocomplete="off" value="'+(have>0?have:'')+'" placeholder="есть" aria-label="остаток: '+esc(name)+'">'+
+            '<span class="stock-note" data-role="note"></span>'+
             '</div>';
         });
         html+='</div></section>';
@@ -207,6 +209,8 @@
           var name=row.getAttribute('data-product'),unit=row.getAttribute('data-unit'),q=qtyOf(name);
           var el=row.querySelector('[data-role="qty"]');
           if(el)el.textContent=q+' '+unit;
+          var note=row.querySelector('[data-role="note"]'),have=stockOf(name),usedStock=Math.floor(have);
+          if(note)note.textContent=(have>0&&usedStock!==have)?'зачли '+usedStock:'';
           row.classList.toggle('closed',q<=0);
           if(q>0){used++;rows.push('  '+name+' — '+q+' '+unit);}
           else if(stockOf(name)>0){closed++;}

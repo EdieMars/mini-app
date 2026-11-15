@@ -52,18 +52,28 @@ const inject = `
 
     var totalBefore = parseInt(document.getElementById('resultTotal').querySelector('b').textContent, 10);
 
-    // 1. дробный остаток вычитается до округления
+    // 1. дробный остаток округляется ВНИЗ: 0,8 кг считаем как 0 — заказ больше, зато не пусто
     var frac = null;
     Array.prototype.forEach.call(rows, function (r) {
       var n = r.getAttribute('data-product'), v = raw[n];
-      if (!frac && v > 1 && Math.abs(v - Math.round(v)) > 0.1) frac = { row: r, name: n, v: v };
+      if (!frac && v > 3 && Math.abs(v - Math.round(v)) > 0.1) frac = { row: r, name: n, v: v };
     });
     check('есть позиция с дробным количеством', !!frac, true);
     if (frac) {
       var u = frac.row.getAttribute('data-unit');
-      type(frac.row.querySelector('.item-stock'), '0,5');
-      check('0,5 вычтено до округления',
-        qtyText(frac.row), Math.ceil(frac.v - 0.5 - 1e-9) + ' ' + u);
+      type(frac.row.querySelector('.item-stock'), '0,8');
+      check('0,8 зачли как 0 — число не уменьшилось',
+        qtyText(frac.row), Math.ceil(frac.v - 1e-9) + ' ' + u);
+      check('подпись «зачли 0»',
+        frac.row.querySelector('[data-role="note"]').textContent, 'зачли 0');
+      type(frac.row.querySelector('.item-stock'), '2,7');
+      check('2,7 зачли как 2',
+        qtyText(frac.row), Math.ceil(frac.v - 2 - 1e-9) + ' ' + u);
+      type(frac.row.querySelector('.item-stock'), '2');
+      check('целые 2 кг вычтены полностью',
+        qtyText(frac.row), Math.ceil(frac.v - 2 - 1e-9) + ' ' + u);
+      check('подписи нет при целом остатке',
+        frac.row.querySelector('[data-role="note"]').textContent, '');
       type(frac.row.querySelector('.item-stock'), '');
       check('пустое поле вернуло исходное число',
         qtyText(frac.row), Math.ceil(frac.v - 1e-9) + ' ' + u);
