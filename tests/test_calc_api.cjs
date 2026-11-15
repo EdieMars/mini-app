@@ -39,7 +39,12 @@ check('calcRaw без запаса = с запасом 0',
 const anyNaN = Object.keys(withoutReserve).some(k => !isFinite(withoutReserve[k]));
 check('calcRaw без запаса: без NaN', !anyNaN);
 
-// 3. нет рецептуры: все блюда и дни в ошибке
+// 3. булочка — своя выпечка, в заказ не попадает
+const all = A.calc(D.menu, D.recipes, (function () { var a = []; for (var i = 1; i <= 28; i++) a.push(i); return a; })(),
+  { 'Завтрак': 40, 'Обед': 40, 'Ужин': 25 });
+check('булочка не заказывается', all['Булочка'] === undefined, all['Булочка']);
+
+// 4. нет рецептуры: все блюда и дни в ошибке
 const broken = JSON.parse(JSON.stringify(D.recipes));
 delete broken['каша овсяная'];
 delete broken['омлет классический'];

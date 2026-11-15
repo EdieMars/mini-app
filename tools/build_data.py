@@ -50,6 +50,14 @@ def build(bot):
 
     changed, stats, skipped = fill_rows(menu)
 
+    # то, что готовят сами, в заказ не идёт — вырезаем и из данных приложения
+    skip_products = set(oc.SKIP_PRODUCTS)
+    recipes_out = {}
+    for key, r in recipes.items():
+        ings = [i for i in r['ingredients'] if i['product'] not in skip_products]
+        recipes_out[key] = {'display': r.get('display', ''), 'ingredients': ings}
+    recipes = recipes_out
+
     units = {}
     for r in recipes.values():
         for ing in r['ingredients']:
