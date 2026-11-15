@@ -41,6 +41,8 @@ def build(bot):
     sys.path.insert(0, bot)
     import order_core as oc
 
+    oc.load()          # заполняет UNITS и PIECE (вес штуки) из папки бота
+
     data_dir = os.path.join(bot, 'data')
     menu = json.loads(io.open(os.path.join(data_dir, 'menu_rows.json'), encoding='utf-8').read())
     recipes = json.loads(io.open(os.path.join(data_dir, 'recipes_final.json'), encoding='utf-8').read())
@@ -70,6 +72,7 @@ def build(bot):
         'units': units,
         'cards': out_cards,
         'card_categories': [[name, pages] for name, pages in oc.CARD_CATEGORIES],
+        'piece_g': dict(oc.PIECE),
     }
     return data, oc, stats, skipped
 
