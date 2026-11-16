@@ -49,6 +49,9 @@
     .item.closed { opacity:.45; }
     .item.closed .qty { text-decoration:line-through; }
     @media (max-width: 420px) { .item-stock { width:58px; height:30px; font-size:12px; } .item-name { font-size:13px; } }
+    .split-row { display:flex; gap:8px; align-items:center; margin:14px 0 4px; }
+    .split-row label { font-size:13px; color:#5f6b62; white-space:nowrap; }
+    .split-row input { flex:1 1 auto; min-width:0; }
     .hz-group { margin:16px 0 2px; }
     .hz-title { font-size:13px; font-weight:600; color:#23603f; margin:0 0 4px; }
     .hz-item { align-items:flex-start; gap:8px; }
@@ -113,7 +116,7 @@
         <button class="primary" id="calculate">Рассчитать заказ</button>
         <div class="actions no-print"><button class="action" id="reset">Очистить поля</button></div>
         <div id="error" class="error hidden" role="alert"></div>
-        <div id="output" class="hidden"><div id="pastHint" class="past-hint hidden"></div><div class="result-head" id="resultHead"></div><div id="resultList"></div><div class="total" id="resultTotal"></div><div class="actions no-print"><button class="action" id="copy">Скопировать</button><button class="action" id="print">Печать / PDF</button></div></div>
+        <div id="output" class="hidden"><div id="pastHint" class="past-hint hidden"></div><div class="result-head" id="resultHead"></div><div id="resultList"></div><div class="split-row no-print"><label for="orderDay">Заказ на</label><input id="orderDay" value="завтра" autocomplete="off"></div><div class="total" id="resultTotal"></div><div class="actions no-print"><button class="action" id="copy">Скопировать</button><button class="action" id="copyBf">Балтфуду</button><button class="action" id="copyPs">Прод стару</button><button class="action" id="print">Печать / PDF</button></div></div>
       </section>
       <section id="screen-menu" class="hidden"><h1>Меню</h1><p class="lead">Листай по дням или перейди к нужной дате.</p><div class="toolbar"><button class="iconbtn" id="prev" aria-label="Предыдущий день">‹</button><input id="weekDate" aria-label="Дата меню"><button class="iconbtn" id="next" aria-label="Следующий день">›</button><button class="iconbtn today" id="today">Сегодня</button></div><p id="menuErr" class="error hidden" role="alert"></p><div id="menuDay"></div><div class="day-pager"><div class="dots" id="dots"></div></div></section>
       <section id="screen-cards" class="hidden"><h1>Техкарты</h1><p class="lead">Найди блюдо и пересчитай ингредиенты на нужное число порций.</p><div class="searchbar"><input id="cardQuery" placeholder="Например, куриная котлета"><button class="action" id="search">Найти</button></div><div id="cardNote" class="hint"></div><div id="cardCats"></div><div id="cardList"></div><div id="cardDetail" class="hidden"></div></section>
@@ -128,7 +131,7 @@
   </div>
   <div id="copyBox" class="sheet hidden"><div class="sheet-in"><div class="sheet-title">Заказ — скопируй вручную</div><p class="sheet-hint" id="copyHint">Долгое нажатие на текст → «Выделить всё» → «Копировать».</p><textarea id="copyText" readonly></textarea><div class="actions"><button class="action hidden" id="openBot">Открыть бота</button><button class="action" id="copyClose">Закрыть</button></div></div></div>
   <nav class="bottom-nav"><div class="nav"><button class="active" data-screen="order"><span>▤</span>Заказ</button><button data-screen="menu"><span>▦</span>Меню</button><button data-screen="cards"><span>▣</span>Техкарты</button><button data-screen="hozka"><span>▥</span>Хозка</button></div></nav>
-  <script src="data.js"></script><script src="calc.js"></script><script src="hozka.js"></script>
+  <script src="data.js"></script><script src="calc.js"></script><script src="hozka.js"></script><script src="suppliers.js"></script>
   <script>
   (function(){
     'use strict';
@@ -243,6 +246,7 @@
         if(rows.length){lines.push(title);lines.push.apply(lines,rows);lines.push('');}
       });
       resultText=lines.join('\n').replace(/\n+$/,'')+'\n';
+      refreshSplit();
       $('resultTotal').innerHTML='<b>'+used+'</b> '+plural(used,'позиция','позиции','позиций')+(closed?' · закрыто остатком: '+closed:'');
       save();
     }
@@ -379,6 +383,65 @@
       if(!(n>0)){$('recipeOut').innerHTML='<p class="error">Укажи число порций больше нуля.</p>';return;}var per=card.per||1,html='';card.ing.forEach(function(i){html+='<div class="item"><span>'+i[0]+'</span><span class="qty">'+A.fmtQty(i[2]*n/per,i[1])+'</span></div>';});$('recipeOut').innerHTML='<div class="divider"></div><strong>На '+n+' порций</strong>'+html;}
     $('search').onclick=function(){var q=value('cardQuery');if(!q){$('cardNote').textContent='Введи название блюда.';return;}var found=A.findCards(q,D.cards);if(!found.length){$('cardCats').classList.add('hidden');showCards([], 'Поиск: '+q);return;}showCards(found,'Поиск: '+q);};$('cardQuery').onkeydown=function(e){if(e.key==='Enter')$('search').click();};
     try{var saved=localStorage.getItem(weekStore);if(saved&&!isNaN(new Date(saved).getTime()))curDay=new Date(saved);}catch(e){}
+    // ---------- поставщики ----------
+    var orderDay='завтра', lastSplit={};
+    try{orderDay=(localStorage.getItem('kitchen.v2.orderday')||orderDay);}catch(e){}
+    function splitTexts(){
+      var S=window.SUPPLIERS;
+      if(!S||!S.order)return {};
+      var res={};
+      S.order.forEach(function(k){res[k]=[];});
+      Array.prototype.forEach.call($('resultList').querySelectorAll('section.group'),function(sec){
+        var head=sec.querySelector('.group-head span'),title=head?head.textContent:'';
+        Array.prototype.forEach.call(sec.querySelectorAll('.item'),function(row){
+          var name=row.getAttribute('data-product'),unit=row.getAttribute('data-unit'),q=qtyOf(name);
+          if(q<=0)return;
+          var sup=S.map[name]||'';
+          if(sup.indexOf(',')>=0)sup=S.sharedTo||'';
+          if(!res[sup])return;
+          res[sup].push({t:title,n:name,q:q,u:unit});
+        });
+      });
+      var texts={};
+      S.order.forEach(function(k){
+        var info=S.info[k]||{name:k,hi:'добрый день',addr:''},arr=res[k]||[];
+        var lines=[info.name+', '+info.hi+'!','Заказ на '+(orderDay||'завтра')+'.'];
+        if(info.addr)lines.push(info.addr);
+        lines.push('');
+        var last=null;
+        arr.forEach(function(it){
+          if(last!==null&&it.t!==last)lines.push('');
+          lines.push(it.n+' '+it.q+' '+it.u);
+          last=it.t;
+        });
+        texts[k]=arr.length?lines.join('\n'):'';
+      });
+      return texts;
+    }
+    function refreshSplit(){
+      var t=splitTexts();lastSplit=t;
+      var n1=(t['Балтфуд']||'').split('\n').length?countLines(t['Балтфуд']):0;
+      var n2=(t['Прод стар']||'').split('\n').length?countLines(t['Прод стар']):0;
+      var b1=$('copyBf'),b2=$('copyPs');
+      if(b1){b1.textContent='Балтфуду ('+n1+')';b1.disabled=!n1;}
+      if(b2){b2.textContent='Прод стару ('+n2+')';b2.disabled=!n2;}
+    }
+    function countLines(txt){
+      var n=0;
+      String(txt||'').split('\n').forEach(function(l){
+        if(l&&!/^(Заказ на|Рощинская|\S+, )/.test(l)&&/\s\d/.test(l))n++;
+      });
+      return n;
+    }
+    function copySupplier(key){
+      var txt=splitTexts()[key]||'';
+      if(!txt)return;
+      copyToClipboard(txt,function(ok){if(!ok)showCopyBox(txt,'Скопировать не удалось: выдели текст вручную.');});
+    }
+    $('orderDay').value=orderDay;
+    $('orderDay').oninput=function(){orderDay=value('orderDay');try{localStorage.setItem('kitchen.v2.orderday',orderDay);}catch(e){}refreshSplit();};
+    $('copyBf').onclick=function(){copySupplier('Балтфуд');};
+    $('copyPs').onclick=function(){copySupplier('Прод стар');};
     // ---------- Хозка ----------
     var hzStore='kitchen.v2.hozka', hzQty={}, hzDay='завтра';
     var HZ_UNITS={'коробки':['коробка','коробки','коробок'],'штуки':['штука','штуки','штук'],
