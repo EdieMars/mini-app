@@ -49,6 +49,13 @@
     .item.closed { opacity:.45; }
     .item.closed .qty { text-decoration:line-through; }
     @media (max-width: 420px) { .item-stock { width:58px; height:30px; font-size:12px; } .item-name { font-size:13px; } }
+    .hz-group { margin:16px 0 2px; }
+    .hz-title { font-size:13px; font-weight:600; color:#23603f; margin:0 0 4px; }
+    .hz-item { align-items:flex-start; gap:8px; }
+    .hz-name { flex:1 1 auto; min-width:0; font-size:14px; display:block; }
+    .hz-note { display:block; font-size:11px; color:#8b8578; margin-top:2px; line-height:1.3; }
+    .hz-dest { display:inline-block; font-size:10px; color:#23603f; background:#e8f1ea; border-radius:3px; padding:1px 4px; margin-left:6px; vertical-align:middle; }
+    .hz-unit { flex:0 0 auto; font-size:12px; color:#6b6f68; min-width:70px; text-align:right; padding-top:9px; }
     .stock-note { font-size:11px; color:#8b8578; margin-left:2px; white-space:nowrap; }
     .past-hint { background:#fff8e4; border:1px solid #e6d6a6; border-radius:8px; padding:10px 12px; margin:0 0 12px; font-size:13px; line-height:1.45; color:#5b4a1f; }
     .past-hint b { color:#4a3a12; }
@@ -86,7 +93,7 @@
     .recipe { background:var(--paper); border-top:2px solid var(--green); padding:14px; margin-top:12px; }
     .recipe .item { font-size:14px; }
     @media (min-width:620px) { body { padding-bottom:24px; } .bottom-nav { position:sticky; bottom:0; } .nav { max-width:500px; } .order-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 24px; } }
-    @media print { body { background:#fff; color:#000; padding:0; } header,.bottom-nav,.no-print,#screen-menu,#screen-cards { display:none!important; } #screen-order { display:block!important; } .result-head { border:0; background:none; padding:0; } .item,.group h3 { border-color:#bbb; } .group.collapsed .group-body { display:block!important; } .group-head::after { display:none; } }
+    @media print { body { background:#fff; color:#000; padding:0; } header,.bottom-nav,.no-print,#screen-menu,#screen-cards,#screen-hozka { display:none!important; } #screen-order { display:block!important; } .result-head { border:0; background:none; padding:0; } .item,.group h3 { border-color:#bbb; } .group.collapsed .group-body { display:block!important; } .group-head::after { display:none; } }
     @media (prefers-reduced-motion:no-preference) { button { transition:transform .12s ease,background-color .15s ease; } }
   </style>
 </head>
@@ -110,11 +117,18 @@
       </section>
       <section id="screen-menu" class="hidden"><h1>Меню</h1><p class="lead">Листай по дням или перейди к нужной дате.</p><div class="toolbar"><button class="iconbtn" id="prev" aria-label="Предыдущий день">‹</button><input id="weekDate" aria-label="Дата меню"><button class="iconbtn" id="next" aria-label="Следующий день">›</button><button class="iconbtn today" id="today">Сегодня</button></div><p id="menuErr" class="error hidden" role="alert"></p><div id="menuDay"></div><div class="day-pager"><div class="dots" id="dots"></div></div></section>
       <section id="screen-cards" class="hidden"><h1>Техкарты</h1><p class="lead">Найди блюдо и пересчитай ингредиенты на нужное число порций.</p><div class="searchbar"><input id="cardQuery" placeholder="Например, куриная котлета"><button class="action" id="search">Найти</button></div><div id="cardNote" class="hint"></div><div id="cardCats"></div><div id="cardList"></div><div id="cardDetail" class="hidden"></div></section>
+      <section id="screen-hozka" class="hidden">
+        <h1>Хозка</h1><p class="lead">Отметь, что заказывать, и скопируй текст для поставщика.</p>
+        <div class="field"><label for="hozkaDay">Заказ на</label><input id="hozkaDay" placeholder="завтра"></div>
+        <div id="hozkaList"></div>
+        <div class="total" id="hozkaTotal"></div>
+        <div class="actions no-print"><button class="action" id="hozkaCopy">Скопировать заказ</button><button class="action" id="hozkaClear">Очистить</button></div>
+      </section>
     </main>
   </div>
   <div id="copyBox" class="sheet hidden"><div class="sheet-in"><div class="sheet-title">Заказ — скопируй вручную</div><p class="sheet-hint" id="copyHint">Долгое нажатие на текст → «Выделить всё» → «Копировать».</p><textarea id="copyText" readonly></textarea><div class="actions"><button class="action hidden" id="openBot">Открыть бота</button><button class="action" id="copyClose">Закрыть</button></div></div></div>
-  <nav class="bottom-nav"><div class="nav"><button class="active" data-screen="order"><span>▤</span>Заказ</button><button data-screen="menu"><span>▦</span>Меню</button><button data-screen="cards"><span>▣</span>Техкарты</button></div></nav>
-  <script src="data.js"></script><script src="calc.js"></script>
+  <nav class="bottom-nav"><div class="nav"><button class="active" data-screen="order"><span>▤</span>Заказ</button><button data-screen="menu"><span>▦</span>Меню</button><button data-screen="cards"><span>▣</span>Техкарты</button><button data-screen="hozka"><span>▥</span>Хозка</button></div></nav>
+  <script src="data.js"></script><script src="calc.js"></script><script src="hozka.js"></script>
   <script>
   (function(){
     'use strict';
@@ -310,7 +324,7 @@
       }
       window.print();
     };
-    function setScreen(name){['order','menu','cards'].forEach(function(n){$('screen-'+n).classList.toggle('hidden',name!==n);});Array.prototype.forEach.call(document.querySelectorAll('.nav button'),function(b){b.classList.toggle('active',b.getAttribute('data-screen')===name);});if(name==='menu')renderMenu();if(name==='cards')renderCats();}
+    function setScreen(name){['order','menu','cards','hozka'].forEach(function(n){$('screen-'+n).classList.toggle('hidden',name!==n);});Array.prototype.forEach.call(document.querySelectorAll('.nav button'),function(b){b.classList.toggle('active',b.getAttribute('data-screen')===name);});if(name==='menu')renderMenu();if(name==='cards')renderCats();if(name==='hozka')renderHozka();}
     document.querySelectorAll('.nav button').forEach(function(b){b.onclick=function(){setScreen(b.getAttribute('data-screen'));};});
     function monday(d){var w=(d.getDay()+6)%7;return new Date(d.getFullYear(),d.getMonth(),d.getDate()-w);}
     function shift(d,n){return new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);}
@@ -365,6 +379,68 @@
       if(!(n>0)){$('recipeOut').innerHTML='<p class="error">Укажи число порций больше нуля.</p>';return;}var per=card.per||1,html='';card.ing.forEach(function(i){html+='<div class="item"><span>'+i[0]+'</span><span class="qty">'+A.fmtQty(i[2]*n/per,i[1])+'</span></div>';});$('recipeOut').innerHTML='<div class="divider"></div><strong>На '+n+' порций</strong>'+html;}
     $('search').onclick=function(){var q=value('cardQuery');if(!q){$('cardNote').textContent='Введи название блюда.';return;}var found=A.findCards(q,D.cards);if(!found.length){$('cardCats').classList.add('hidden');showCards([], 'Поиск: '+q);return;}showCards(found,'Поиск: '+q);};$('cardQuery').onkeydown=function(e){if(e.key==='Enter')$('search').click();};
     try{var saved=localStorage.getItem(weekStore);if(saved&&!isNaN(new Date(saved).getTime()))curDay=new Date(saved);}catch(e){}
+    // ---------- Хозка ----------
+    var hzStore='kitchen.v2.hozka', hzQty={}, hzDay='завтра';
+    var HZ_UNITS={'коробки':['коробка','коробки','коробок'],'штуки':['штука','штуки','штук'],
+                  'упаковки':['упаковка','упаковки','упаковок'],'пары':['пара','пары','пар']};
+    function hzSave(){try{localStorage.setItem(hzStore,JSON.stringify({day:hzDay,qty:hzQty}));}catch(e){}}
+    function hzLoad(){try{var s=JSON.parse(localStorage.getItem(hzStore)||'null');if(s){hzDay=s.day||'завтра';hzQty=s.qty||{};}}catch(e){}}
+    function hzCount(){var n=0;for(var k in hzQty){if(hzQty[k]>0)n++;}return n;}
+    function hzTotal(){var n=hzCount();$('hozkaTotal').innerHTML='<b>'+n+'</b> '+plural(n,'позиция','позиции','позиций');}
+    function renderHozka(){
+      var H=window.HOZKA;if(!H||!$('hozkaList'))return;
+      $('hozkaDay').value=hzDay;
+      var html='';
+      H.groups.forEach(function(g){
+        html+='<div class="hz-group"><div class="hz-title">'+esc(g.title)+'</div>';
+        g.items.forEach(function(it){
+          var q=hzQty[it.n]||'';
+          html+='<div class="item hz-item">'
+            +'<span class="hz-name">'+esc(it.n)
+              +(it.dest?'<span class="hz-dest">'+esc(it.dest)+'</span>':'')
+              +(it.info?'<span class="hz-note">'+esc(it.info)+'</span>':'')
+            +'</span>'
+            +'<input class="item-stock hz-qty" type="text" inputmode="numeric" autocomplete="off" data-name="'+esc(it.n)+'" data-unit="'+esc(it.u)+'" value="'+q+'" placeholder="0" aria-label="'+esc(it.n)+'">'
+            +'<span class="hz-unit">'+esc(it.u)+'</span>'
+            +'</div>';
+        });
+        html+='</div>';
+      });
+      $('hozkaList').innerHTML=html;
+      Array.prototype.forEach.call($('hozkaList').querySelectorAll('.hz-qty'),function(inp){
+        inp.addEventListener('input',function(){
+          var name=this.getAttribute('data-name'),v=String(this.value||'').replace(/\s+/g,'');
+          if(!v){delete hzQty[name];}
+          else if(/^\d+$/.test(v)){hzQty[name]=parseInt(v,10);}
+          else{this.value='';delete hzQty[name];}
+          hzTotal();hzSave();
+        },false);
+      });
+      hzTotal();
+    }
+    function hozkaText(){
+      var lines=['Юлия, доброе утро!','Заказ на '+(hzDay||'завтра')+'.',''],total=0;
+      window.HOZKA.groups.forEach(function(g){
+        g.items.forEach(function(it){
+          var q=hzQty[it.n];if(!(q>0))return;
+          var f=HZ_UNITS[it.u]||['','',''];
+          lines.push(it.n+' '+q+' '+plural(q,f[0],f[1],f[2]));
+          total++;
+        });
+      });
+      return total?lines.join('\n'):'';
+    }
+    $('hozkaCopy').onclick=function(){
+      var t=hozkaText();
+      if(!t){$('hozkaTotal').innerHTML='<b>0</b> позиций — отметь, что заказывать';return;}
+      copyToClipboard(t,function(ok){
+        if(ok){$('hozkaCopy').textContent='Скопировано';setTimeout(function(){$('hozkaCopy').textContent='Скопировать заказ';},1300);}
+        else{showCopyBox(t,'Скопировать не удалось: выдели текст вручную и нажми «Копировать».');}
+      });
+    };
+    $('hozkaClear').onclick=function(){hzQty={};renderHozka();hzSave();};
+    $('hozkaDay').oninput=function(){hzDay=value('hozkaDay');hzSave();};
+    hzLoad();
     $('cycleChip').textContent='ЦИКЛ · ДЕНЬ '+A.dateToDay(new Date());restore();renderMenu();
   })();
   </script>
