@@ -28,6 +28,13 @@ const inject = `
     input.value = v;
     input.dispatchEvent(new Event('input', { bubbles: true }));
   }
+  function signature() {
+    var parts = [];
+    Array.prototype.forEach.call(document.querySelectorAll('#resultList .item'), function (r) {
+      parts.push(r.getAttribute('data-product') + '=' + qtyText(r));
+    });
+    return parts.join('|');
+  }
   try {
     var A = window.APP, D = window.DATA;
 
@@ -49,6 +56,15 @@ const inject = `
     var firstUnit = first.getAttribute('data-unit');
     check('до остатков число = «сырое» вверх',
       qtyText(first), Math.ceil(raw[firstName] - 1e-9) + ' ' + firstUnit);
+
+    // 0. старые остатки из localStorage не подставляются в новый заказ
+    var seeded = rowOf('Картофель');
+    if (seeded) {
+      check('старый остаток не подставлен в поле',
+        seeded.querySelector('.item-stock').value, '');
+      check('старый остаток не вычтен',
+        qtyText(seeded), Math.ceil(raw['Картофель'] - 1e-9) + ' ' + seeded.getAttribute('data-unit'));
+    } else { out.errors.push('нет позиции Картофель для проверки localStorage'); }
 
     var totalBefore = parseInt(document.getElementById('resultTotal').querySelector('b').textContent, 10);
 
@@ -123,6 +139,33 @@ const inject = `
       check('остаток 1 шт вычтен',
         qtyText(piece), Math.ceil(pv - 1 - 1e-9) + ' шт');
     }
+
+    // 7. остатки не попадают в localStorage
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem('kitchen.v2.order') || 'null'); } catch (e) {}
+    check('в localStorage нет остатков', !!(saved && !('stock' in saved)), true);
+
+    // 8. повтор «Рассчитать заказ» при тех же входах — тот же результат
+    var sig1 = signature();
+    document.getElementById('calculate').click();
+    var sig2 = signature();
+    check('повтор даёт тот же заказ', sig1.length > 0 && sig1 === sig2, sig1 === sig2);
+
+    // 9. «Очистить поля» -> новый заказ в той же вкладке: остатки пустые
+    type(rowOf(firstName).querySelector('.item-stock'), '1');
+    check('перед сбросом остаток стоит',
+      rowOf(firstName).querySelector('.item-stock').value, '1');
+    document.getElementById('reset').click();
+    document.getElementById('from').value = '16.11';
+    document.getElementById('b').value = '40';
+    document.getElementById('l').value = '40';
+    document.getElementById('d').value = '25';
+    document.getElementById('calculate').click();
+    var fresh = rowOf(firstName);
+    check('после сброса поле «есть» пустое',
+      fresh.querySelector('.item-stock').value, '');
+    check('после сброса остаток не вычтен',
+      qtyText(fresh), Math.ceil(raw[firstName] - 1e-9) + ' ' + firstUnit);
   } catch (e) { out.errors.push('исключение: ' + e.message); }
   var pre = document.createElement('pre'); pre.id = 'TESTOUT'; pre.textContent = JSON.stringify(out);
   document.body.appendChild(pre);
@@ -130,7 +173,11 @@ const inject = `
 <\/script>`;
 
 const tmp = path.join(APP, '_reserve_test.html');
-fs.writeFileSync(tmp, html.replace('</body>', inject + '</body>'), 'utf8');
+// в localStorage заранее лежат «старые» остатки — новый заказ не должен их подставлять
+const seed = `<script>try{localStorage.setItem('kitchen.v2.order',JSON.stringify({mode:'date',from:'16.11',to:'',days:'',b:'40',l:'40',d:'25',reserve:'',stock:{'Картофель':999}}));}catch(e){}<\/script>`;
+fs.writeFileSync(tmp, html
+  .replace('<script src="data.js">', seed + '<script src="data.js">')
+  .replace('</body>', inject + '</body>'), 'utf8');
 const browser = ['C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
   'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'].find(b => fs.existsSync(b));
 let dom = '';

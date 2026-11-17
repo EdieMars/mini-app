@@ -152,8 +152,8 @@
       return parseInt(t,10);
     }
     function switchMode(next){mode=next;$('modeDate').classList.toggle('active',mode==='date');$('modeCycle').classList.toggle('active',mode==='cycle');$('dateFields').classList.toggle('hidden',mode!=='date');$('cycleFields').classList.toggle('hidden',mode!=='cycle');save();}
-    function save(){try{localStorage.setItem(store,JSON.stringify({mode:mode,from:value('from'),to:value('to'),days:value('days'),b:value('b'),l:value('l'),d:value('d'),reserve:value('reserve'),stock:stock}));}catch(e){}}
-    function restore(){var s;try{s=JSON.parse(localStorage.getItem(store)||'null');}catch(e){}if(s){['from','to','days','b','l','d','reserve'].forEach(function(k){if(typeof s[k]==='string')$(k).value=s[k];});if(s.stock&&typeof s.stock==='object')stock=s.stock;switchMode(s.mode==='cycle'?'cycle':'date');}else clearFields();}
+    function save(){try{localStorage.setItem(store,JSON.stringify({mode:mode,from:value('from'),to:value('to'),days:value('days'),b:value('b'),l:value('l'),d:value('d'),reserve:value('reserve')}));}catch(e){}}
+    function restore(){var s;try{s=JSON.parse(localStorage.getItem(store)||'null');}catch(e){}stock={};if(s){['from','to','days','b','l','d','reserve'].forEach(function(k){if(typeof s[k]==='string')$(k).value=s[k];});switchMode(s.mode==='cycle'?'cycle':'date');}else clearFields();}
     function clearFields(){['from','to','days','b','l','d','reserve'].forEach(function(k){$(k).value='';});stock={};lastRaw={};pastDates=[];$('output').classList.add('hidden');$('error').classList.add('hidden');resultText='';switchMode('date');save();}
     $('modeDate').onclick=function(){switchMode('date');};$('modeCycle').onclick=function(){switchMode('cycle');};
     function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
