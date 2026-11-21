@@ -41,7 +41,7 @@ const inject = `
     var bf = document.getElementById('copyBf'), ps = document.getElementById('copyPs');
     check('кнопка Балтфуду есть', !!bf, true);
     check('кнопка Прод стару есть', !!ps, true);
-    check('у Балтфуда 28 позиций', /28/.test(bf.textContent), true);
+    check('у Балтфуда 27 позиций', /27/.test(bf.textContent), true);
     check('у Прод стару 3 позиции', /3/.test(ps.textContent), true);
 
     var t1 = copy('copyBf');

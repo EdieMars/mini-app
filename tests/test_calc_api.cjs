@@ -43,6 +43,7 @@ check('calcRaw без запаса: без NaN', !anyNaN);
 const all = A.calc(D.menu, D.recipes, (function () { var a = []; for (var i = 1; i <= 28; i++) a.push(i); return a; })(),
   { 'Завтрак': 40, 'Обед': 40, 'Ужин': 25 });
 check('булочка не заказывается', all['Булочка'] === undefined, all['Булочка']);
+check('мука не заказывается', all['Мука'] === undefined, all['Мука']);
 
 // 4. нет рецептуры: все блюда и дни в ошибке
 const broken = JSON.parse(JSON.stringify(D.recipes));
